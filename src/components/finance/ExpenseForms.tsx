@@ -90,7 +90,7 @@ export function ExpenseForms({ categories, currency }: { categories: Option[]; c
     }
   }
 
-  const dialogClass = "w-[calc(100%-2rem)] max-w-lg max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-0 text-right shadow-2xl backdrop:bg-slate-950/50";
+  const dialogClass = "fixed inset-0 m-auto w-[calc(100%-2rem)] max-w-lg max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-0 text-right shadow-2xl backdrop:bg-slate-950/50";
 
   return <>
     <button type="button" onClick={openExpense} className={buttonClass}>+ إضافة مصروف</button>
