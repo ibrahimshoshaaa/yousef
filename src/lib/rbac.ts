@@ -5,6 +5,7 @@ export const rolePermissions = {
   MANAGER: [
     "dashboard.read",
     "orders.read",
+    "orders.write",
     "products.read",
     "products.write",
     "materials.read",
