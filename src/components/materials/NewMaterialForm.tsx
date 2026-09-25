@@ -18,6 +18,7 @@ export function NewMaterialForm({ types, suppliers }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [availableTypes, setAvailableTypes] = useState(types);
+  const [showTypeCreator, setShowTypeCreator] = useState(types.length === 0);
 
   const [form, setForm] = useState({
     materialTypeId: "",
@@ -134,14 +135,18 @@ export function NewMaterialForm({ types, suppliers }: Props) {
             </option>
           ))}
         </select>
+        <p className="mt-2 text-xs text-slate-500">النوع تصنيف للخامات، مثل «زيت». لو اخترته بالفعل، كمّل البيانات واحفظ الخامة.</p>
         {availableTypes.length === 0 && <p className="mt-2 text-sm text-amber-700">أضف نوع مادة أولًا للمتابعة.</p>}
-        <MaterialTypeCreator onCreated={(type) => {
+        {availableTypes.length > 0 && <button type="button" onClick={() => setShowTypeCreator((current) => !current)} className="mt-3 text-sm font-semibold text-[#315b4c] underline">{showTypeCreator ? "إخفاء إضافة النوع" : "+ إضافة نوع آخر (اختياري)"}</button>}
+        {showTypeCreator && <MaterialTypeCreator onCreated={(type) => {
           setAvailableTypes((current) => [...current, type].sort((a, b) => a.name.localeCompare(b.name, "ar")));
           set("materialTypeId", type.id);
-        }} />
+          setShowTypeCreator(false);
+        }} />}
       </div>
 
-      {field("اسم المادة", "name", { required: true, placeholder: "مثال: عود النور 3 مل" })}
+      {field("اسم الخامة المحددة", "name", { required: true, placeholder: "مثال: زيت عود خام أو زيت مسك" })}
+      <p className="-mt-2 text-xs text-slate-500">«زيت» هو النوع؛ هنا اكتب اسم الزيت اللي هتتابع كميته في المخزون.</p>
 
       <div className="grid grid-cols-2 gap-3">
         {field("وحدة العرض", "unit", { required: true, placeholder: "مثال: مل، قطعة، كيس" })}
@@ -170,7 +175,7 @@ export function NewMaterialForm({ types, suppliers }: Props) {
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        {field("التكلفة الافتراضية (EGP)", "defaultCost", {
+        {field(`تكلفة ${form.unit.trim() || "الوحدة"} الافتراضية (EGP)`, "defaultCost", {
           type: "number",
           min: "0",
           step: "0.01",
@@ -183,6 +188,7 @@ export function NewMaterialForm({ types, suppliers }: Props) {
           placeholder: "0",
         })}
       </div>
+      <p className="-mt-2 text-xs text-slate-500">التكلفة هنا للوحدة الواحدة، مثل سعر ١ مل لو الوحدة «مل». سعر العبوة كاملة وكمية الشراء تسجلهم من «المصروفات ← شراء مادة للمخزون» بعد حفظ الخامة.</p>
 
       {field("السعة (ml) — للزجاجات والزيوت", "capacityMl", {
         type: "number",
