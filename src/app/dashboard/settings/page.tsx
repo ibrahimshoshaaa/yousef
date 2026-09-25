@@ -61,10 +61,10 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           <h2 className="text-lg font-semibold">التكاليف</h2>
           <div className="mt-6 grid gap-6 sm:grid-cols-2">
             <label className="block text-sm font-medium">تكلفة المرتجع الافتراضية ({store.currency})<input name="defaultReturnCost" required type="number" min="0" max="1000000" step="0.01" defaultValue={returnCost} disabled={session.role !== "OWNER"} className="mt-2 block w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-[#96723c] disabled:bg-slate-50" /><span className="mt-2 block text-xs font-normal text-slate-500">تُسجّل هذه التكلفة ضمن مصروفات المرتجع عند المعالجة.</span></label>
-            <label className="flex items-start gap-3 rounded-xl bg-slate-50 p-4 text-sm"><input name="costingEnabled" type="checkbox" defaultChecked={costingEnabled === "true"} disabled={session.role !== "OWNER"} className="mt-1 size-4 accent-[#263b35]" /><span><strong className="block">إظهار التكلفة التقديرية</strong><span className="mt-1 block leading-6 text-slate-500">تعرض تقدير تكلفة الوصفات وهوامش الربح عند توفر أسعار المواد.</span></span></label>
+            <label aria-label="إظهار التكلفة التقديرية" className="flex items-start gap-3 rounded-xl bg-slate-50 p-4 text-sm"><input name="costingEnabled" type="checkbox" defaultChecked={costingEnabled === "true"} disabled={session.role !== "OWNER"} className="mt-1 size-4 accent-[#263b35]" /><span><strong className="block">إظهار التكلفة التقديرية</strong><span className="mt-1 block leading-6 text-slate-500">تعرض تقدير تكلفة الوصفات وهوامش الربح عند توفر أسعار المواد.</span></span></label>
           </div>
         </section>
-        {session.role === "OWNER" ? <button className="rounded-xl bg-[#263b35] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#345348]">حفظ التغييرات</button> : <p className="text-sm text-slate-500">تعديل هذه الإعدادات متاح لمالك المتجر فقط.</p>}
+        {session.role === "OWNER" ? <button type="submit" className="rounded-xl bg-[#263b35] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#345348]">حفظ التغييرات</button> : <p className="text-sm text-slate-500">تعديل هذه الإعدادات متاح لمالك المتجر فقط.</p>}
       </form>
     </main>
   );

@@ -45,7 +45,7 @@ export function verifyOAuthCallbackHmac(
     if (key === "hmac" || key === "signature") continue;
     pairs.push(`${key}=${value}`);
   }
-  pairs.sort();
+  pairs.sort((a, b) => a.localeCompare(b, "en"));
   const message = pairs.join("&");
 
   const digest = createHmac("sha256", apiSecret).update(message).digest("hex");

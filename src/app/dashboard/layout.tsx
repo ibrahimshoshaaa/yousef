@@ -53,7 +53,7 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
         </div>
         <div className="flex-1"><NavLinks /></div>
         <form action={logout} className="border-t border-white/10 p-3">
-          <button className="w-full rounded-xl px-4 py-3 text-right text-sm text-slate-300 transition hover:bg-white/10 hover:text-white">تسجيل الخروج ←</button>
+          <button type="submit" className="w-full rounded-xl px-4 py-3 text-right text-sm text-slate-300 transition hover:bg-white/10 hover:text-white">تسجيل الخروج ←</button>
         </form>
       </aside>
 
@@ -66,7 +66,7 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
           <div className="max-h-[70vh] overflow-y-auto border-t border-white/10">
             <NavLinks />
             <form action={logout} className="border-t border-white/10 p-3">
-              <button className="w-full rounded-xl px-4 py-3 text-right text-sm text-slate-300">تسجيل الخروج ←</button>
+              <button type="submit" className="w-full rounded-xl px-4 py-3 text-right text-sm text-slate-300">تسجيل الخروج ←</button>
             </form>
           </div>
         </details>

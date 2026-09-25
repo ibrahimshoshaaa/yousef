@@ -39,13 +39,13 @@ jobs:
           node-version: '24'
           cache: npm
       - name: Install dependencies
-        run: npm ci --no-audit --no-fund
+        run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Generate Prisma Client
         run: npm run db:generate
       - name: Apply committed schema migrations
-        run: npx prisma migrate deploy
+        run: ./node_modules/.bin/prisma migrate deploy
       - name: Verify migration status
-        run: npx prisma migrate status
+        run: ./node_modules/.bin/prisma migrate status
       - name: Run tests
         run: npm test
       - name: Verify PostgreSQL operations

@@ -39,6 +39,8 @@ jobs:
           node-version: '24'
           cache: npm
       - name: Install dependencies and generate Prisma Client
-        run: npm ci --no-audit --no-fund
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Generate Prisma Client
+        run: npm run db:generate
       - name: Create first owner
         run: npm run auth:bootstrap-owner
