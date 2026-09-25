@@ -12,6 +12,24 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: perfume_erp_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U test_user -d perfume_erp_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://test_user:test_password@localhost:5432/perfume_erp_test?schema=public
+      AUTH_SECRET: ci-only-random-string-for-auth-tests-1234567890
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
     steps:
       - name: Check out source
         uses: actions/checkout@v4
@@ -24,8 +42,12 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Generate Prisma Client
         run: npm run db:generate
+      - name: Create fresh test schema
+        run: npm run db:push
       - name: Run tests
         run: npm test
+      - name: Verify PostgreSQL operations
+        run: node --test tests/database.integration.mjs
       - name: Check TypeScript
         run: npm run typecheck
       - name: Lint
