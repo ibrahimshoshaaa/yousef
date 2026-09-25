@@ -35,7 +35,7 @@ export function MaterialTypeCreator({ onCreated }: { onCreated: (type: MaterialT
       <label htmlFor="new-material-type" className="block text-sm font-semibold text-slate-800">إضافة نوع مادة جديد</label>
       <p className="mt-1 text-xs text-slate-600">مثل: زيوت عطرية، زجاجات، عبوات أو مواد تغليف.</p>
       <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-        <input id="new-material-type" value={name} onChange={(event) => setName(event.target.value)} required maxLength={100} placeholder="اسم النوع" className="min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-[#96723c]" />
+        <input id="new-material-type" value={name} onChange={(event) => setName(event.target.value)} maxLength={100} placeholder="اسم النوع" className="min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-[#96723c]" />
         <button type="button" onClick={create} disabled={busy || !name.trim()} className="rounded-xl bg-[#263b35] px-5 py-3 text-sm font-semibold text-white disabled:opacity-50">{busy ? "جارٍ الإضافة..." : "إضافة النوع"}</button>
       </div>
       {message && <p role="status" className="mt-2 text-sm text-slate-700">{message}</p>}
