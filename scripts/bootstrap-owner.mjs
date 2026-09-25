@@ -3,11 +3,17 @@
 import { PrismaClient } from '@prisma/client';
 import { hash } from 'bcryptjs';
 const db = new PrismaClient();
+function isValidEmail(email) {
+  const at = email.indexOf('@');
+  if (at < 1 || at !== email.lastIndexOf('@')) return false;
+  const domain = email.slice(at + 1);
+  return !/\s/.test(email) && domain.includes('.') && !domain.startsWith('.') && !domain.endsWith('.');
+}
 async function main() {
   const email = process.env.OWNER_EMAIL?.trim().toLowerCase();
   const password = process.env.OWNER_PASSWORD;
   let storeId = process.env.OWNER_STORE_ID;
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !password || password.length < 12 || password.length > 1024) throw new Error('Set OWNER_EMAIL and OWNER_PASSWORD (12+ characters)');
+  if (!email || !isValidEmail(email) || !password || password.length < 12 || password.length > 1024) throw new Error('Set OWNER_EMAIL and OWNER_PASSWORD (12+ characters)');
   if (!storeId) {
     const stores = await db.store.findMany({ select: { id: true } });
     if (stores.length === 1) storeId = stores[0].id;
