@@ -1,37 +1,10 @@
 export const dynamic = "force-dynamic";
 
-import Link from "next/link";
+import { NavLinks } from "@/components/DashboardNavLinks";
 import { redirect } from "next/navigation";
 import { signOut } from "@/auth";
 import { requireAuth } from "@/lib/auth-helpers";
 import { db } from "@/lib/db";
-
-const nav = [
-  { label: "لوحة التحكم", href: "/dashboard", mark: "▦" },
-  { label: "الطلبات", href: "/dashboard/orders", mark: "◫" },
-  { label: "المنتجات", href: "/dashboard/products", mark: "◇" },
-  { label: "المواد الخام", href: "/dashboard/materials", mark: "◈" },
-  { label: "المخزون", href: "/dashboard/inventory", mark: "▤" },
-  { label: "الاستهلاك", href: "/dashboard/consumption", mark: "◉" },
-  { label: "الوصفات", href: "/dashboard/recipes", mark: "✧" },
-  { label: "المرتجعات", href: "/dashboard/returns", mark: "↶" },
-  { label: "المصروفات", href: "/dashboard/expenses", mark: "◌" },
-  { label: "التقارير", href: "/dashboard/reports", mark: "▥" },
-  { label: "الإعدادات", href: "/dashboard/settings", mark: "⚙" },
-];
-
-function NavLinks() {
-  return (
-    <nav aria-label="التنقل الرئيسي" className="grid gap-1 p-3">
-      {nav.map(({ label, href, mark }) => (
-        <Link key={href} href={href} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-300 transition hover:bg-white/10 hover:text-white focus-visible:bg-white/10 focus-visible:outline-none">
-          <span aria-hidden="true" className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-white/5 text-lg text-[#d6b978]">{mark}</span>
-          <span>{label}</span>
-        </Link>
-      ))}
-    </nav>
-  );
-}
 
 export default async function DashboardLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   let session;
@@ -58,7 +31,7 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
       </aside>
 
       <header className="sticky top-0 z-30 border-b border-slate-200 bg-[#18251f] text-white lg:hidden">
-        <details open className="group">
+        <details className="group">
           <summary className="flex cursor-pointer list-none items-center justify-between px-5 py-4">
             <div><span className="font-bold">✦ Perfume ERP</span><span className="mt-1 block text-xs text-slate-400">{storeName}</span></div>
             <span className="rounded-lg border border-white/20 px-3 py-2 text-sm group-open:bg-white/10">القائمة ☰</span>
