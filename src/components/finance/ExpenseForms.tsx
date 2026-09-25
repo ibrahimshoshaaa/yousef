@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent, type ReactNode } from "react";
 
@@ -11,7 +10,7 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   return <label className="block min-w-0 text-sm font-medium text-slate-700">{label}{children}</label>;
 }
 
-export function ExpenseForms({ categories, materials }: { categories: Option[]; materials: Option[] }) {
+export function ExpenseForms({ categories }: { categories: Option[] }) {
   const router = useRouter();
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -49,7 +48,7 @@ export function ExpenseForms({ categories, materials }: { categories: Option[]; 
 
   return <div className="space-y-5">
     {message && <p role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-slate-800">{message}</p>}
-    <div className="grid gap-5 lg:grid-cols-2">
+    <div className="grid gap-5">
       <form className={cardClass} onSubmit={(event) => submit(event, "/api/expenses")}>
         <div><h2 className="text-lg font-semibold text-slate-900">تسجيل مصروف</h2><p className="mt-1 text-sm text-slate-500">سجّل قيمة المصروف وتاريخه ضمن الفئة المناسبة.</p></div>
         <Field label="الفئة *"><select key={categoryKey} required name="categoryId" className={inputClass} defaultValue=""><option value="" disabled>اختر الفئة</option>{categoryList.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></Field>
@@ -59,14 +58,7 @@ export function ExpenseForms({ categories, materials }: { categories: Option[]; 
         <button type="submit" disabled={busy || !categoryList.length} className={buttonClass}>حفظ المصروف</button>
       </form>
 
-      <form className={cardClass} onSubmit={(event) => submit(event, "/api/purchases")}>
-        <div><h2 className="text-lg font-semibold text-slate-900">شراء مادة للمخزون</h2><p className="mt-1 text-sm text-slate-500">يُسجَّل الشراء وتُضاف الكمية إلى المخزون.</p></div>
-        <Field label="المادة *"><select required name="materialId" defaultValue="" className={inputClass}><option value="" disabled>اختر المادة</option>{materials.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></Field>
-        {!materials.length && <p className="text-sm text-amber-700">لا توجد مواد خام بعد. <Link className="font-semibold underline" href="/dashboard/materials/new">إضافة مادة خام</Link></p>}
-        <div className="grid gap-4 sm:grid-cols-2"><Field label="الكمية *"><input required name="quantity" type="number" min="0.000001" step="any" inputMode="decimal" placeholder="0" className={inputClass} /></Field><Field label="التكلفة الإجمالية (EGP) *"><input required name="amount" type="number" min="0.01" step="0.01" inputMode="decimal" placeholder="0.00" className={inputClass} /></Field></div>
-        <div className="grid gap-4 sm:grid-cols-2"><Field label="تاريخ الشراء *"><input required name="date" type="date" defaultValue={new Date().toLocaleDateString("en-CA")} className={inputClass} /></Field><Field label="رقم الفاتورة (اختياري)"><input name="reference" placeholder="رقم أو مرجع الفاتورة" className={inputClass} /></Field></div>
-        <button type="submit" disabled={busy || !materials.length} className={buttonClass}>تسجيل الشراء</button>
-      </form>
+
     </div>
     <form className={cardClass} onSubmit={(event) => submit(event, "/api/expenses/categories")}>
       <div><h2 className="text-lg font-semibold text-slate-900">فئات المصروفات</h2><p className="mt-1 text-sm text-slate-500">مثل الإيجار أو الشحن أو التسويق.</p></div>
