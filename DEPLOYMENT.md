@@ -14,3 +14,5 @@ No database connection or credentials were supplied for this development run, so
 ## GitHub Actions
 
 `.github/workflows/ci.yml` runs on pushes, pull requests, and manual triggers. It installs dependencies with Node 24, generates Prisma Client, runs tests, TypeScript and lint checks, and builds Next.js. No database or Shopify secrets are passed to CI. The workflow validates code and build only; it does not deploy the site, create database tables, or sync Shopify. `.gitignore` keeps `node_modules`, Next build output, local environment files, and TypeScript cache out of Git.
+
+The GitHub Actions verification job starts an **ephemeral PostgreSQL 16 container**. It applies the Prisma schema to that empty CI database and tests store scoping, Shopify ID uniqueness, and transaction rollback. The test credentials exist only in the disposable workflow runner; this database is deleted with the job and is not a production database.
