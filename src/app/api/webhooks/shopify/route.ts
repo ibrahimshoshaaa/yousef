@@ -70,9 +70,14 @@ export async function POST(req: NextRequest) {
     if (err instanceof WebhookAlreadyProcessedError) {
       return NextResponse.json({ data: { duplicate: true } });
     }
-    // Persisted with status FAILED inside receiveWebhookEvent/processWebhookEvent;
-    // still acknowledge receipt (see doc comment above).
+    // A persistence failure has no durable event to retry, so request redelivery.
+    // Processing failures are marked FAILED by the service and acknowledged.
     console.error("Shopify webhook processing failed:", err);
+    const persisted = await db.webhookEvent.findUnique({
+      where: { storeId_eventId: { storeId: store.id, eventId } },
+      select: { status: true },
+    }).catch(() => null);
+    if (persisted?.status !== "FAILED") return NextResponse.json({ error: "Webhook not safely handled" }, { status: 503 });
     return NextResponse.json({ data: { received: true, processed: false } });
   }
 
