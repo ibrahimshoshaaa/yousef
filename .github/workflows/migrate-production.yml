@@ -3,9 +3,6 @@ name: Apply production database migrations
 on:
   workflow_dispatch:
 
-permissions:
-  contents: read
-
 concurrency:
   group: production-database-migration
   cancel-in-progress: false
@@ -13,6 +10,8 @@ concurrency:
 jobs:
   migrate:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     timeout-minutes: 15
     environment: production
     env:
