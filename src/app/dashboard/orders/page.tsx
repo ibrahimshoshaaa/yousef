@@ -37,7 +37,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
       </header>
       <form action="/dashboard/orders" className="flex max-w-md gap-2">
         <input name="q" defaultValue={q} placeholder="ابحث برقم الطلب" aria-label="ابحث برقم الطلب" className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-[#96723c]" />
-        <button className="rounded-xl bg-[#263b35] px-5 py-3 text-sm font-medium text-white hover:bg-[#345348]">بحث</button>
+        <button type="submit" className="rounded-xl bg-[#263b35] px-5 py-3 text-sm font-medium text-white hover:bg-[#345348]">بحث</button>
       </form>
       {orders.length ? (
         <div className="space-y-3">
