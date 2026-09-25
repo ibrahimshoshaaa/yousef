@@ -58,7 +58,7 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
       </aside>
 
       <header className="sticky top-0 z-30 border-b border-slate-200 bg-[#18251f] text-white lg:hidden">
-        <details className="group">
+        <details open className="group">
           <summary className="flex cursor-pointer list-none items-center justify-between px-5 py-4">
             <div><span className="font-bold">✦ Perfume ERP</span><span className="mt-1 block text-xs text-slate-400">{storeName}</span></div>
             <span className="rounded-lg border border-white/20 px-3 py-2 text-sm group-open:bg-white/10">القائمة ☰</span>
