@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { MaterialTypeCreator } from "./MaterialTypeCreator";
 
 type MaterialType = { id: string; name: string; code: string };
 type Supplier = { id: string; name: string };
@@ -16,6 +17,7 @@ export function NewMaterialForm({ types, suppliers }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [availableTypes, setAvailableTypes] = useState(types);
 
   const [form, setForm] = useState({
     materialTypeId: "",
@@ -126,17 +128,17 @@ export function NewMaterialForm({ types, suppliers }: Props) {
           className="w-full rounded-lg border border-[var(--border)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
         >
           <option value="">اختر النوع...</option>
-          {types.map((t) => (
+          {availableTypes.map((t) => (
             <option key={t.id} value={t.id}>
               {t.name}
             </option>
           ))}
         </select>
-        {types.length === 0 && (
-          <p className="mt-1 text-xs text-amber-600">
-            لا توجد أنواع بعد — أضف نوعًا من إعدادات المخزون
-          </p>
-        )}
+        {availableTypes.length === 0 && <p className="mt-2 text-sm text-amber-700">أضف نوع مادة أولًا للمتابعة.</p>}
+        <MaterialTypeCreator onCreated={(type) => {
+          setAvailableTypes((current) => [...current, type].sort((a, b) => a.name.localeCompare(b.name, "ar")));
+          set("materialTypeId", type.id);
+        }} />
       </div>
 
       {field("اسم المادة", "name", { required: true, placeholder: "مثال: عود النور 3 مل" })}

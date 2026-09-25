@@ -3,6 +3,8 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth-helpers";
 import { getSetting } from "@/lib/settings";
+import { can } from "@/lib/rbac";
+import { MaterialTypesSettings } from "@/components/materials/MaterialTypesSettings";
 
 const settingsSchema = z.object({
   name: z.string().trim().min(2).max(80),
@@ -12,10 +14,11 @@ const settingsSchema = z.object({
 
 export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ saved?: string; error?: string }> }) {
   const session = await requireAuth();
-  const [store, returnCost, costingEnabled] = await Promise.all([
+  const [store, returnCost, costingEnabled, materialTypes] = await Promise.all([
     db.store.findUniqueOrThrow({ where: { id: session.storeId }, select: { name: true, currency: true, timezone: true, createdAt: true } }),
     getSetting(session.storeId, "defaultReturnCost"),
     getSetting(session.storeId, "costingEnabled"),
+    db.materialType.findMany({ where: { storeId: session.storeId, active: true }, select: { id: true, name: true, code: true }, orderBy: { name: "asc" } }),
   ]);
   const params = await searchParams;
 
@@ -66,6 +69,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         </section>
         {session.role === "OWNER" ? <button type="submit" className="rounded-xl bg-[#263b35] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#345348]">حفظ التغييرات</button> : <p className="text-sm text-slate-500">تعديل هذه الإعدادات متاح لمالك المتجر فقط.</p>}
       </form>
+      {can(session.role, "materials.write") && <MaterialTypesSettings initialTypes={materialTypes} />}
     </main>
   );
 }
