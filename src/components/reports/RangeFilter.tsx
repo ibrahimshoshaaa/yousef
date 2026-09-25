@@ -1,0 +1,5 @@
+import Link from "next/link";
+const periods = [["today", "اليوم"], ["yesterday", "أمس"], ["7d", "آخر 7 أيام"], ["30d", "آخر 30 يومًا"], ["month", "هذا الشهر"], ["lastMonth", "الشهر الماضي"]];
+export function RangeFilter({ base, period, from, to }: { base: string; period: string; from?: string; to?: string }) {
+  return <div className="space-y-3"><nav className="flex flex-wrap gap-2" aria-label="تصفية التاريخ">{periods.map(([key, label]) => <Link key={key} href={`${base}?period=${key}`} className={`rounded-lg border px-3 py-2 text-sm ${period === key ? "border-blue-700 bg-blue-50 text-blue-800" : "bg-white"}`}>{label}</Link>)}</nav><form method="GET" action={base} className="flex flex-wrap items-end gap-2 text-sm"><input type="hidden" name="period" value="custom" /><label>من <input required type="date" name="from" defaultValue={from} className="block rounded border p-2" /></label><label>إلى <input required type="date" name="to" defaultValue={to} className="block rounded border p-2" /></label><button className="rounded bg-blue-700 px-4 py-2 text-white">تطبيق</button></form></div>;
+}

@@ -1,0 +1,562 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum StoreStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum UserStatus {
+  ACTIVE
+  INVITED
+  DISABLED
+}
+
+enum Role {
+  OWNER
+  MANAGER
+  EMPLOYEE
+}
+
+model Store {
+  id                         String              @id @default(cuid())
+  name                       String
+  shopifyShopDomain          String?             @unique
+  encryptedShopifyAccessToken String?
+  status                     StoreStatus         @default(ACTIVE)
+  currency                   String              @default("EGP")
+  timezone                   String              @default("Africa/Cairo")
+  createdAt                  DateTime            @default(now())
+  updatedAt                  DateTime            @updatedAt
+
+  users                      User[]
+  settings                   Setting[]
+  auditLogs                  AuditLog[]
+  shopifyConnection          ShopifyConnection?
+  webhookEvents              WebhookEvent[]
+  syncJobs                   SyncJob[]
+  syncState                  SyncState?
+  products                   Product[]
+  productVariants             ProductVariant[]
+  materials                  Material[]
+  materialTypes              MaterialType[]
+  suppliers                  Supplier[]
+  materialPurchases          MaterialPurchase[]
+  recipes                    Recipe[]
+  recipeVersions              RecipeVersion[]
+  inventoryTransactions       InventoryTransaction[]
+  inventoryBalances           InventoryBalance[]
+  consumption                Consumption[]
+  returns                    Return[]
+  expenses                   Expense[]
+  expenseCategories           ExpenseCategory[]
+  orders                     Order[]
+}
+
+model User {
+  id           String     @id @default(cuid())
+  storeId      String
+  email        String     @unique
+  name         String?
+  passwordHash String?
+  role         Role       @default(EMPLOYEE)
+  status       UserStatus @default(INVITED)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  store        Store      @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  auditLogs    AuditLog[]
+
+  @@index([storeId])
+}
+
+model Setting {
+  id        String   @id @default(cuid())
+  storeId   String
+  key       String
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, key])
+  @@index([storeId])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  storeId   String
+  userId    String?
+  action    String
+  entity    String
+  entityId  String?
+  before    Json?
+  after     Json?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([storeId, createdAt])
+  @@index([entity, entityId])
+}
+
+model ShopifyConnection {
+  id                String   @id @default(cuid())
+  storeId           String   @unique
+  shopDomain        String
+  shopifyShopId     String?
+  apiVersion        String?
+  scope             String?
+  connectedAt       DateTime?
+  lastSyncAt        DateTime?
+  webhooksRegisteredAt DateTime?
+  status            String   @default("DISCONNECTED")
+  lastError         String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  store             Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+}
+
+model WebhookEvent {
+  id             String   @id @default(cuid())
+  storeId        String
+  eventId        String
+  topic          String
+  payload       Json
+  status         String   @default("RECEIVED")
+  processedAt   DateTime?
+  errorMessage  String?
+  createdAt     DateTime @default(now())
+
+  store         Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, eventId])
+  @@index([storeId, createdAt])
+  @@index([storeId, status])
+}
+
+model SyncJob {
+  id          String    @id @default(cuid())
+  storeId     String
+  type        String
+  status      String    @default("PENDING")
+  cursor      String?
+  startedAt   DateTime?
+  finishedAt  DateTime?
+  error       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  store       Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([storeId, createdAt])
+}
+
+model SyncState {
+  id              String    @id @default(cuid())
+  storeId         String    @unique
+  lastSuccessfulAt DateTime?
+  lastAttemptAt   DateTime?
+  status          String    @default("IDLE")
+  lastError       String?
+  updatedAt       DateTime  @updatedAt
+
+  store           Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+}
+
+model Product {
+  id          String           @id @default(cuid())
+  storeId     String
+  shopifyId   String?
+  title       String
+  handle      String?
+  status      String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  store       Store            @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  variants    ProductVariant[]
+
+  @@unique([storeId, shopifyId])
+  @@index([storeId, title])
+}
+
+model ProductVariant {
+  id             String         @id @default(cuid())
+  storeId        String
+  productId      String
+  shopifyId      String?
+  title          String
+  sku            String?
+  price          Decimal        @db.Decimal(18, 4)
+  active         Boolean        @default(true)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  store          Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  product        Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  recipes        Recipe[]
+  orderItems     OrderItem[]
+  consumption    Consumption[]
+
+  @@unique([storeId, shopifyId])
+  @@index([storeId, productId])
+  @@index([storeId, sku])
+}
+
+model MaterialType {
+  id          String      @id @default(cuid())
+  storeId     String
+  name        String
+  code        String
+  active      Boolean     @default(true)
+
+  store       Store       @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  materials   Material[]
+
+  @@unique([storeId, code])
+}
+
+model Material {
+  id             String       @id @default(cuid())
+  storeId        String
+  materialTypeId String
+  supplierId     String?
+  name           String
+  sku            String?
+  unit           String
+  baseUnit       String
+  description    String?
+  capacityMl     Decimal?     @db.Decimal(18, 6)
+  defaultCost    Decimal?     @db.Decimal(18, 4)
+  reorderLevel   Decimal?     @db.Decimal(18, 6)
+  active         Boolean      @default(true)
+  metadata       Json?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  store          Store               @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  materialType   MaterialType        @relation(fields: [materialTypeId], references: [id])
+  supplier       Supplier?           @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  recipeItems    RecipeItem[]
+  transactions   InventoryTransaction[]
+  balance        InventoryBalance?
+  purchaseItems  MaterialPurchaseItem[]
+  consumptionItems ConsumptionItem[]
+
+  @@index([storeId, name])
+  @@index([storeId, sku])
+}
+
+model Supplier {
+  id        String     @id @default(cuid())
+  storeId   String
+  name      String
+  phone     String?
+  email     String?
+  notes     String?
+  active    Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  store     Store      @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  materials Material[]
+  purchases MaterialPurchase[]
+
+  @@index([storeId, name])
+}
+
+model MaterialPurchase {
+  id          String                 @id @default(cuid())
+  storeId     String
+  supplierId  String?
+  reference   String?
+  totalAmount Decimal                @db.Decimal(18, 4)
+  purchasedAt DateTime               @default(now())
+  createdAt   DateTime               @default(now())
+
+  store       Store                  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  supplier    Supplier?              @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  items       MaterialPurchaseItem[]
+  expense     Expense?
+}
+
+model MaterialPurchaseItem {
+  id          String          @id @default(cuid())
+  purchaseId  String
+  materialId  String
+  quantity    Decimal         @db.Decimal(18, 6)
+  unitCost    Decimal         @db.Decimal(18, 4)
+
+  purchase    MaterialPurchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  material    Material         @relation(fields: [materialId], references: [id])
+
+  @@index([purchaseId])
+  @@index([materialId])
+}
+
+model Recipe {
+  id          String          @id @default(cuid())
+  storeId     String
+  variantId  String
+  name        String
+  active      Boolean         @default(true)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  store       Store           @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  variant     ProductVariant   @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  versions    RecipeVersion[]
+
+  @@unique([storeId, variantId])
+}
+
+model RecipeVersion {
+  id          String       @id @default(cuid())
+  storeId     String
+  recipeId    String
+  version     Int
+  isCurrent   Boolean      @default(false)
+  effectiveAt DateTime     @default(now())
+  immutable   Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+
+  store       Store        @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  recipe      Recipe       @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  items       RecipeItem[]
+  orderItems  OrderItem[]
+  consumptions Consumption[]
+
+  @@unique([recipeId, version])
+  @@index([recipeId, isCurrent])
+}
+
+model RecipeItem {
+  id             String       @id @default(cuid())
+  recipeVersionId String
+  materialId     String
+  quantity       Decimal      @db.Decimal(18, 6)
+  unit           String
+
+  recipeVersion  RecipeVersion @relation(fields: [recipeVersionId], references: [id], onDelete: Cascade)
+  material       Material      @relation(fields: [materialId], references: [id])
+
+  @@index([recipeVersionId])
+}
+
+model InventoryTransaction {
+  id             String   @id @default(cuid())
+  storeId        String
+  materialId     String
+  type           String
+  quantity       Decimal  @db.Decimal(18, 6)
+  unit           String
+  referenceType  String?
+  referenceId    String?
+  reason         String?
+  note           String?
+  userId         String?
+  createdAt      DateTime @default(now())
+
+  store          Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  material       Material @relation(fields: [materialId], references: [id])
+
+  @@index([storeId, materialId, createdAt])
+  @@index([referenceType, referenceId])
+}
+
+model InventoryBalance {
+  id          String   @id @default(cuid())
+  storeId     String
+  materialId  String   @unique
+  quantity    Decimal  @db.Decimal(18, 6)
+  updatedAt   DateTime @updatedAt
+
+  store       Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  material    Material @relation(fields: [materialId], references: [id])
+}
+
+model Consumption {
+  id              String            @id @default(cuid())
+  storeId         String
+  orderId         String
+  orderItemId     String            @unique
+  variantId       String
+  recipeVersionId String
+  quantity        Decimal           @db.Decimal(18, 6)
+  createdAt       DateTime          @default(now())
+
+  store           Store            @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  order           Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderItem       OrderItem        @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  variant         ProductVariant   @relation(fields: [variantId], references: [id])
+  recipeVersion   RecipeVersion    @relation(fields: [recipeVersionId], references: [id])
+  items           ConsumptionItem[]
+
+  @@index([storeId, orderId])
+  @@index([storeId, createdAt])
+  @@index([recipeVersionId])
+}
+
+model ConsumptionItem {
+  id             String       @id @default(cuid())
+  consumptionId  String
+  materialId     String
+  quantity       Decimal      @db.Decimal(18, 6)
+  unit           String
+
+  consumption    Consumption @relation(fields: [consumptionId], references: [id], onDelete: Cascade)
+  material       Material    @relation(fields: [materialId], references: [id])
+
+  @@index([consumptionId])
+  @@index([materialId])
+}
+
+model Return {
+  id          String       @id @default(cuid())
+  storeId     String
+  orderId     String
+  shopifyId   String?
+  status      String
+  totalAmount Decimal?     @db.Decimal(18, 4)
+  returnCost  Decimal      @db.Decimal(18, 4)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  store       Store        @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  order       Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  items       ReturnItem[]
+  expense     Expense?
+  processedAt DateTime?
+  reason      String?
+
+  @@unique([storeId, shopifyId])
+  @@index([storeId, createdAt])
+}
+
+model ReturnItem {
+  id          String   @id @default(cuid())
+  returnId    String
+  orderItemId String
+  quantity    Decimal  @db.Decimal(18, 6)
+  condition   String
+  restocked   Boolean  @default(false)
+  restockedAt DateTime?
+
+  return      Return   @relation(fields: [returnId], references: [id], onDelete: Cascade)
+  orderItem   OrderItem @relation(fields: [orderItemId], references: [id])
+
+  @@unique([returnId, orderItemId])
+}
+
+model ExpenseCategory {
+  id        String    @id @default(cuid())
+  storeId   String
+  name      String
+  active    Boolean   @default(true)
+
+  store     Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  expenses  Expense[]
+
+  @@unique([storeId, name])
+}
+
+model Expense {
+  id          String          @id @default(cuid())
+  storeId     String
+  categoryId  String
+  returnId    String?         @unique
+  purchaseId  String?         @unique
+  currency    String          @default("EGP")
+  updatedAt   DateTime        @updatedAt
+  amount      Decimal         @db.Decimal(18, 4)
+  date        DateTime
+  description String?
+  reference   String?
+  userId      String?
+  createdAt   DateTime        @default(now())
+
+  store       Store           @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  category    ExpenseCategory @relation(fields: [categoryId], references: [id])
+  return      Return?         @relation(fields: [returnId], references: [id], onDelete: SetNull)
+  purchase    MaterialPurchase? @relation(fields: [purchaseId], references: [id], onDelete: SetNull)
+
+  @@index([storeId, date])
+  @@index([storeId, categoryId, date])
+}
+
+model Order {
+  id              String      @id @default(cuid())
+  storeId         String
+  shopifyId       String?
+  orderNumber     String?
+  financialStatus String?
+  fulfillmentStatus String?
+  currency        String
+  subtotal        Decimal?    @db.Decimal(18, 4)
+  shipping        Decimal?    @db.Decimal(18, 4)
+  tax             Decimal?    @db.Decimal(18, 4)
+  discount        Decimal?    @db.Decimal(18, 4)
+  total           Decimal?    @db.Decimal(18, 4)
+  refunded        Decimal?    @db.Decimal(18, 4)
+  netSales        Decimal?    @db.Decimal(18, 4)
+  customerRef     String?
+  occurredAt      DateTime
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  store           Store       @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  items           OrderItem[]
+  consumptions    Consumption[]
+  returns         Return[]
+
+  @@unique([storeId, shopifyId])
+  @@index([storeId, occurredAt])
+}
+
+model OrderItem {
+  id              String        @id @default(cuid())
+  orderId         String
+  shopifyLineId   String?
+  variantId       String?
+  title           String
+  sku             String?
+  quantity        Decimal       @db.Decimal(18, 6)
+  originalPrice   Decimal?      @db.Decimal(18, 4)
+  discount        Decimal?      @db.Decimal(18, 4)
+  finalLinePrice  Decimal?      @db.Decimal(18, 4)
+  refunded        Decimal?      @db.Decimal(18, 4)
+  recipeVersionId String?
+  consumptionStatus String      @default("PENDING")
+  consumptionError  String?
+
+  order           Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  variant         ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+  recipeVersion   RecipeVersion? @relation(fields: [recipeVersionId], references: [id], onDelete: SetNull)
+  returnItems     ReturnItem[]
+  consumption     Consumption?
+
+  @@unique([orderId, shopifyLineId])
+  @@index([orderId])
+  @@index([orderId, consumptionStatus])
+  @@index([consumptionStatus])
+}
+
+model LoginThrottle {
+  key         String   @id
+  failures    Int      @default(0)
+  windowStart DateTime @default(now())
+  blockedUntil DateTime?
+  updatedAt   DateTime @updatedAt
+}
