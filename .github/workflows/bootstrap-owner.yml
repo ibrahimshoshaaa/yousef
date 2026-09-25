@@ -1,0 +1,45 @@
+name: Create first production owner
+
+on:
+  workflow_dispatch:
+    inputs:
+      store_name:
+        description: Store name when creating the first store
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-owner-bootstrap
+  cancel-in-progress: false
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    env:
+      DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+      OWNER_EMAIL: ${{ secrets.OWNER_EMAIL }}
+      OWNER_PASSWORD: ${{ secrets.OWNER_PASSWORD }}
+      OWNER_STORE_NAME: ${{ inputs.store_name }}
+    steps:
+      - name: Check required secrets
+        run: |
+          if [ -z "$DATABASE_URL" ] || [ -z "$OWNER_EMAIL" ] || [ -z "$OWNER_PASSWORD" ]; then
+            echo "::error::Set PRODUCTION_DATABASE_URL, OWNER_EMAIL and OWNER_PASSWORD in the production environment."
+            exit 1
+          fi
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install dependencies and generate Prisma Client
+        run: npm ci --no-audit --no-fund
+      - name: Create first owner
+        run: npm run auth:bootstrap-owner
