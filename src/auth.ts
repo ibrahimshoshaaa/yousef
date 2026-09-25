@@ -15,13 +15,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async authorize(raw) {
       const parsed = credentialsSchema.safeParse(raw);
       if (!parsed.success) return null;
-      if (await isLoginBlocked(parsed.data.email)) return null;
-      const user = await db.user.findUnique({ where: { email: parsed.data.email.toLowerCase() }, include: { store: true } });
+      const email = parsed.data.email.trim().toLowerCase();
+      if (await isLoginBlocked(email)) return null;
+      const user = await db.user.findUnique({ where: { email }, include: { store: true } });
       // bcrypt comparison for unknown accounts keeps response behavior similar.
       const hash = user?.passwordHash ?? "$2b$12$vl5VqV.0FDPWfpSgbcrLV.eEhppwrKICCp2J9v8mC2UYb06Uzjf7e";
       const valid = await compare(parsed.data.password, hash);
-      if (!user || !valid || user.status !== "ACTIVE" || user.store.status !== "ACTIVE") { await recordLoginFailure(parsed.data.email); return null; }
-      await clearLoginFailures(parsed.data.email);
+      if (!user || !valid || user.status !== "ACTIVE" || user.store.status !== "ACTIVE") { await recordLoginFailure(email); return null; }
+      await clearLoginFailures(email);
       await db.auditLog.create({ data: { storeId: user.storeId, userId: user.id, action: "LOGIN", entity: "User", entityId: user.id } });
       return { id: user.id, email: user.email, name: user.name };
     },
