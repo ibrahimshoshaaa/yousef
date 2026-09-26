@@ -47,6 +47,7 @@ export function ManualSaleForm({ variants }: { variants: Variant[] }) {
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "تعذر حفظ البيع");
       requestId.current = null;
+      window.dispatchEvent(new Event("dashboard-navigation-start"));
       router.push(`/dashboard/orders?manual=created`);
       router.refresh();
     } catch (failure) {

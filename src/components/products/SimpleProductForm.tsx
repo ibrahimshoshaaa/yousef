@@ -27,6 +27,7 @@ export function SimpleProductForm({ materials }: { materials: Material[] }) {
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || "تعذر حفظ المنتج");
       requestId.current = null;
+      window.dispatchEvent(new Event("dashboard-navigation-start"));
       router.push(`/dashboard/products/${body.data.productId}`); router.refresh();
     } catch (failure) { setError(failure instanceof Error ? failure.message : "تعذر حفظ المنتج"); setBusy(false); }
   }

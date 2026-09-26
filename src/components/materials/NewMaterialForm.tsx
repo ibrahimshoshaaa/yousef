@@ -81,6 +81,7 @@ export function NewMaterialForm({ types, suppliers }: Props) {
       }
 
       const { data } = await res.json();
+      window.dispatchEvent(new Event("dashboard-navigation-start"));
       router.push(`/dashboard/materials/${data.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "حدث خطأ");
