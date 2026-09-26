@@ -30,6 +30,15 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         <div><p className="text-sm font-semibold text-[#96723c]">نظرة عامة</p><h1 className="mt-1 text-3xl font-bold tracking-tight">لوحة التحكم</h1><p className="mt-2 text-sm text-slate-500">من {report.range.from} إلى {report.range.to} · {report.range.timeZone}</p></div>
         <Link href="/dashboard/reports" className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-[#315b4c] hover:border-[#315b4c]">عرض التقارير ←</Link>
       </header>
+      <section aria-label="وصول سريع" className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+        <h2 className="mb-3 text-base font-bold text-slate-900">وصول سريع</h2>
+        <div className="flex flex-wrap gap-2">
+          {can(session.role, "orders.write") && <Link href="/dashboard/orders/new" className="rounded-xl bg-[#263b35] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#345348]">+ تسجيل طلب</Link>}
+          {can(session.role, "products.write") && <Link href="/dashboard/products/new" className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-[#263b35] hover:bg-slate-50">+ إضافة منتج</Link>}
+          {can(session.role, "inventory.read") && <Link href="/dashboard/inventory" className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-[#263b35] hover:bg-slate-50">المخزون</Link>}
+          {can(session.role, "expenses.read") && <Link href="/dashboard/expenses" className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-[#263b35] hover:bg-slate-50">المصروفات</Link>}
+        </div>
+      </section>
       <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5" aria-label="اختيار الفترة">
         <RangeFilter base="/dashboard" period={report.range.period} from={query.from} to={query.to} />
       </section>
