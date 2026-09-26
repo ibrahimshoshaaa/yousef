@@ -11,9 +11,10 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   return <label className="block min-w-0 text-sm font-medium text-slate-700">{label}{children}</label>;
 }
 
-export function ExpenseForms({ categories, currency }: { categories: Option[]; currency: string }) {
+export function ExpenseForms({ categories, currency, initialOpen = false }: { categories: Option[]; currency: string; initialOpen?: boolean }) {
   const router = useRouter();
   const expenseDialog = useRef<HTMLDialogElement>(null);
+  const openedInitially = useRef(false);
   const categoryDialog = useRef<HTMLDialogElement>(null);
   const [categoryList, setCategoryList] = useState(categories);
   const [categoryId, setCategoryId] = useState("");
@@ -21,6 +22,7 @@ export function ExpenseForms({ categories, currency }: { categories: Option[]; c
   const [error, setError] = useState("");
 
   useEffect(() => { setCategoryList(categories); }, [categories]);
+  useEffect(() => { if (initialOpen && !openedInitially.current) { openedInitially.current = true; expenseDialog.current?.showModal(); } }, [initialOpen]);
 
   function openExpense() {
     setError("");

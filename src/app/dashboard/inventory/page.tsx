@@ -11,8 +11,9 @@ const categories = [
   { key: "TESTERS", name: "زجاجات تيستر", aliases: ["تيستر", "زجاجات تيستر"] },
 ];
 
-export default async function InventoryPage() {
+export default async function InventoryPage({ searchParams }: { searchParams: Promise<{ add?: string }> }) {
   const session = await requireAuth();
+  const { add } = await searchParams;
   if (!can(session.role, "inventory.read")) throw new Error("Forbidden");
   const [balances, types] = await Promise.all([
     db.inventoryBalance.findMany({ where: { storeId: session.storeId }, include: { material: { include: { materialType: true } } }, orderBy: { material: { name: "asc" } } }),
@@ -23,7 +24,7 @@ export default async function InventoryPage() {
   const groups = [...categories.map(({ key, name }) => ({ key, name })), ...extra.map((type) => ({ key: `type:${type.id}`, name: type.name }))];
   return <main className="mx-auto max-w-6xl space-y-6 px-4 py-6 sm:px-8 sm:py-9">
     <header className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-sm font-semibold text-[#96723c]">خامات الشغل</p><h1 className="mt-1 text-3xl font-bold">المخزون</h1><p className="mt-2 text-sm text-slate-500">تابع رصيد الزيوت والزجاجات والبوكسات والتيستر والخامات الأخرى.</p></div>
-      {can(session.role, "inventory.write") && can(session.role, "expenses.write") && can(session.role, "materials.write") && <QuickStockForm extraCategories={extra.map((type) => ({ id: `type:${type.id}`, name: type.name }))} />}
+      {can(session.role, "inventory.write") && can(session.role, "expenses.write") && can(session.role, "materials.write") && <QuickStockForm initialOpen={add === "1"} extraCategories={extra.map((type) => ({ id: `type:${type.id}`, name: type.name }))} />}
     </header>
     <div className="grid gap-5 sm:grid-cols-2">{groups.map((group) => {
       const rows = balances.filter((balance) => (categoryFor(balance.material.materialType.name)?.key ?? `type:${balance.material.materialTypeId}`) === group.key);
