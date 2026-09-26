@@ -64,7 +64,15 @@ export class ShopifyClient {
           await new Promise((r) => setTimeout(r, 1500));
           continue;
         }
-        throw new ShopifyApiError("Shopify GraphQL error", undefined, json.errors);
+        const details = json.errors
+          .map((error: { message?: string }) => error.message)
+          .filter((message: unknown): message is string => typeof message === "string")
+          .join("; ");
+        throw new ShopifyApiError(
+          details ? `Shopify GraphQL error: ${details}` : "Shopify GraphQL error",
+          undefined,
+          json.errors
+        );
       }
 
       return json.data as T;
@@ -136,7 +144,6 @@ export class ShopifyClient {
               processedAt
               createdAt
               updatedAt
-              customer { id }
               lineItems(first: 100) {
                 edges {
                   node {
@@ -191,7 +198,6 @@ export class ShopifyClient {
           processedAt
           createdAt
           updatedAt
-          customer { id }
           lineItems(first: 100) {
             edges {
               node {

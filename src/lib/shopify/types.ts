@@ -60,7 +60,6 @@ export type ShopifyOrderNode = {
   processedAt: string | null;
   createdAt: string;
   updatedAt: string;
-  customer: { id: string } | null;
   lineItems: { edges: { node: ShopifyOrderLineItemNode }[] };
   refunds: ShopifyRefundNode[];
 };

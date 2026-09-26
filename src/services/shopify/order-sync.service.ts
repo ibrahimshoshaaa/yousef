@@ -51,7 +51,6 @@ export async function upsertShopifyOrder(storeId: string, node: ShopifyOrderNode
         total,
         refunded,
         netSales,
-        customerRef: node.customer?.id ?? null,
         occurredAt: new Date(node.processedAt ?? node.createdAt),
       },
       create: {
@@ -68,7 +67,6 @@ export async function upsertShopifyOrder(storeId: string, node: ShopifyOrderNode
         total,
         refunded,
         netSales,
-        customerRef: node.customer?.id ?? null,
         occurredAt: new Date(node.processedAt ?? node.createdAt),
       },
     });
