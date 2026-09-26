@@ -12,7 +12,7 @@ export async function updateManualOrderStatus(input: { storeId: string; orderId:
   if (order.manualStatus === input.status) return { status: input.status };
 
   if (input.status === "RETURNED") {
-    if (order.manualStatus !== "SHIPPING" && order.manualStatus !== "DELIVERED") throw new Error("يمكن إرجاع الطلب بعد بدء الشحن فقط");
+    if (order.manualStatus !== "SHIPPING") throw new Error("يمكن إرجاع الطلب أثناء الشحن فقط، قبل تسجيل التسليم وتحصيل المبلغ");
     // A deterministic ID makes retries safe if processing fails after creating the return.
     const returnId = `manual_return_${order.id}`;
     let existing = await db.return.findUnique({ where: { id: returnId } });

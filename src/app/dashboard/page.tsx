@@ -32,14 +32,14 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         <Link href="/dashboard/reports" className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-[#315b4c] hover:border-[#315b4c]">عرض التقارير ←</Link>
       </header>
       <section aria-label="وصول سريع" className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-        <h2 className="mb-3 text-base font-bold text-slate-900">وصول سريع</h2>
-        <div className="flex flex-wrap gap-2">
-          {can(session.role, "orders.write") && <Link href="/dashboard/orders/new" className="rounded-xl bg-[#263b35] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#345348]">+ تسجيل طلب</Link>}
-          {can(session.role, "products.write") && <Link href="/dashboard/products/new" className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-[#263b35] hover:bg-slate-50">+ إضافة منتج</Link>}
-          {can(session.role, "inventory.write") && can(session.role, "expenses.write") && can(session.role, "materials.write") && <Link href="/dashboard/inventory?add=1" className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-[#263b35] hover:bg-slate-50">+ إضافة مخزون</Link>}
-          {can(session.role, "expenses.write") && <Link href="/dashboard/expenses?add=1" className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-[#263b35] hover:bg-slate-50">+ إضافة مصروف</Link>}
-          {can(session.role, "orders.read") && <Link href="/dashboard/orders" className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-[#263b35] hover:bg-slate-50">الطلبات</Link>}
-          {can(session.role, "returns.read") && <Link href="/dashboard/returns" className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-[#263b35] hover:bg-slate-50">المرتجعات</Link>}
+        <h2 className="mb-4 text-base font-bold text-slate-900">وصول سريع</h2>
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
+          {can(session.role, "orders.write") && <Link href="/dashboard/orders/new" className="flex min-h-14 items-center justify-center rounded-xl bg-[#263b35] px-2 py-3 text-center text-sm font-semibold text-white hover:bg-[#345348]">+ تسجيل طلب</Link>}
+          {can(session.role, "products.write") && <Link href="/dashboard/products/new" className="flex min-h-14 items-center justify-center rounded-xl border border-slate-200 px-2 py-3 text-center text-sm font-semibold text-[#263b35] hover:bg-slate-50">+ إضافة منتج</Link>}
+          {can(session.role, "inventory.write") && can(session.role, "expenses.write") && can(session.role, "materials.write") && <Link href="/dashboard/inventory?add=1" className="flex min-h-14 items-center justify-center rounded-xl border border-slate-200 px-2 py-3 text-center text-sm font-semibold text-[#263b35] hover:bg-slate-50">+ إضافة مخزون</Link>}
+          {can(session.role, "expenses.write") && <Link href="/dashboard/expenses?add=1" className="flex min-h-14 items-center justify-center rounded-xl border border-slate-200 px-2 py-3 text-center text-sm font-semibold text-[#263b35] hover:bg-slate-50">+ إضافة مصروف</Link>}
+          {can(session.role, "orders.read") && <Link href="/dashboard/orders" className="flex min-h-14 items-center justify-center rounded-xl border border-slate-200 px-2 py-3 text-center text-sm font-semibold text-[#263b35] hover:bg-slate-50">الطلبات</Link>}
+          {can(session.role, "returns.read") && <Link href="/dashboard/returns" className="flex min-h-14 items-center justify-center rounded-xl border border-slate-200 px-2 py-3 text-center text-sm font-semibold text-[#263b35] hover:bg-slate-50">المرتجعات</Link>}
         </div>
       </section>
       <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5" aria-label="اختيار الفترة">

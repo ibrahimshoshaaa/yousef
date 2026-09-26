@@ -42,6 +42,7 @@ export async function processReturn(input: { storeId: string; returnId: string; 
     const ret = await tx.return.findFirst({ where: { id: input.returnId, storeId: input.storeId }, include: { order: { include: { items: true } }, items: { include: { orderItem: { include: { consumption: { include: { items: true } } } } } } } });
     if (!ret) throw new Error("Return not found");
     if (ret.processedAt) throw new Error("Return already processed");
+    if (ret.order.manualStatus && ret.order.manualStatus !== "SHIPPING") throw new Error("يمكن إرجاع الطلب اليدوي أثناء الشحن فقط، قبل التسليم");
     if (ret.items.some(i => Number(i.quantity) <= 0 || Number(i.quantity) > Number(i.orderItem.quantity))) throw new Error("Invalid return quantity");
     if (input.items.length !== ret.items.length || new Set(input.items.map(i => i.id)).size !== ret.items.length) throw new Error("Classify every returned item once");
     const byId = new Map(input.items.map(i => [i.id, i]));
@@ -70,10 +71,11 @@ export async function processReturn(input: { storeId: string; returnId: string; 
     if (ret.order.manualStatus) {
       if (ret.items.length !== ret.order.items.length || ret.items.some(item => Number(item.quantity) !== Number(item.orderItem.quantity))) throw new Error("Manual return must include all items");
       const paidAmount = ret.order.financialStatus === "PAID" ? ret.order.total : ret.order.depositAmount;
-      await tx.order.update({ where: { id: ret.orderId }, data: {
+      const updated = await tx.order.updateMany({ where: { id: ret.orderId, manualStatus: "SHIPPING" }, data: {
         manualStatus: "RETURNED", financialStatus: Number(ret.order.depositAmount) > 0 || ret.order.financialStatus === "PAID" ? "REFUNDED" : "VOIDED",
         fulfillmentStatus: "UNFULFILLED", refunded: paidAmount, netSales: 0,
       } });
+      if (!updated.count) throw new Error("تغيرت حالة الطلب؛ حدّث الصفحة وحاول ثانية");
       for (const item of ret.order.items) await tx.orderItem.update({ where: { id: item.id }, data: { refunded: item.finalLinePrice } });
     }
     await tx.auditLog.create({ data: { storeId: input.storeId, userId: input.userId, action: "PROCESS_RETURN", entity: "Return", entityId: ret.id, metadata: { expenseId: expense.id, restockedItems: input.items.filter(i => i.restock).map(i => i.id) } } });
