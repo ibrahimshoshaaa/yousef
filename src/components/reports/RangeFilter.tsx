@@ -12,7 +12,7 @@ export function RangeFilter({ base, period, from, to }: { base: string; period: 
     <Link href={`${base}?period=yesterday`} aria-current={period === "yesterday" ? "page" : undefined} className={`${button} ${period === "yesterday" ? active : inactive}`}>أمس</Link>
     <details className="group relative min-w-0">
       <summary className={`${button} cursor-pointer list-none gap-1 marker:hidden [&::-webkit-details-marker]:hidden ${chosen || period === "custom" ? active : inactive}`}><span className="truncate">{chosen ?? (period === "custom" ? "فترة مخصصة" : "فترات أخرى")}</span><span aria-hidden="true" className="shrink-0 transition-transform group-open:rotate-180">⌄</span></summary>
-      <div className="absolute right-0 z-20 mt-2 w-[min(85vw,320px)] rounded-xl border border-slate-200 bg-white p-3 shadow-lg ">
+      <div className="fixed inset-x-4 top-[20dvh] z-50 mx-auto max-h-[70dvh] w-auto max-w-md overflow-y-auto rounded-xl border border-slate-200 bg-white p-3 shadow-xl sm:top-[25dvh]">
         <nav className="grid grid-cols-2 gap-2" aria-label="فترات أخرى">{otherPeriods.map(([key, label]) => <Link key={key} href={`${base}?period=${key}`} aria-current={period === key ? "page" : undefined} className={`${button} ${period === key ? active : inactive}`}>{label}</Link>)}</nav>
         <form method="GET" action={base} className="mt-3 space-y-2 border-t border-slate-100 pt-3 text-xs">
           <input type="hidden" name="period" value="custom" />
