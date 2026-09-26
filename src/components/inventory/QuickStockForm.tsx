@@ -11,6 +11,7 @@ const defaults: Category[] = [
 
 export function QuickStockForm({ extraCategories }: { extraCategories: Category[] }) {
   const router = useRouter();
+  const dialog = useRef<HTMLDialogElement>(null);
   const requestId = useRef<string | null>(null);
   const [categories, setCategories] = useState([...defaults, ...extraCategories]);
   const [category, setCategory] = useState("OILS");
@@ -22,6 +23,7 @@ export function QuickStockForm({ extraCategories }: { extraCategories: Category[
   const [showNewCategory, setShowNewCategory] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [notice, setNotice] = useState("");
   const currentUnit = category === "OILS" ? "مل" : category.startsWith("type:") ? unit : "قطعة";
   const inputClass = "mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-base outline-none focus:border-[#96723c]";
 
@@ -48,15 +50,22 @@ export function QuickStockForm({ extraCategories }: { extraCategories: Category[
       if (!response.ok) throw new Error(body.error || "تعذر حفظ المخزون");
       requestId.current = null;
       setName(""); setQuantity(""); setAmount("");
-      setMessage("تم حفظ الخامة والكمية، وتسجيل سعر الشراء في المصروفات.");
+      setNotice("تم حفظ المخزون وتسجيل سعر الشراء في المصروفات.");
+      dialog.current?.close();
       router.refresh();
     } catch (error) { setMessage(error instanceof Error ? error.message : "تعذر حفظ المخزون"); }
     finally { setBusy(false); }
   }
 
-  return <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
-    <h2 className="text-xl font-bold text-slate-900">إضافة مخزون</h2>
+  return <div className="space-y-2">
+    <button type="button" onClick={() => { setMessage(""); setNotice(""); dialog.current?.showModal(); }} className="rounded-xl bg-[#263b35] px-5 py-3 text-sm font-semibold text-white hover:bg-[#345348]">+ إضافة مخزون</button>
+    {notice && <p role="status" className="max-w-xs rounded-xl bg-green-50 p-3 text-sm text-green-800">{notice}</p>}
+    <dialog ref={dialog} dir="rtl" aria-labelledby="stock-dialog-title" className="fixed inset-0 m-auto w-[calc(100%-2rem)] max-w-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-0 text-right shadow-2xl backdrop:bg-slate-950/50">
+    <section className="p-5 sm:p-7">
+    <div className="flex items-start justify-between gap-4"><div>
+    <h2 id="stock-dialog-title" className="text-xl font-bold text-slate-900">إضافة مخزون</h2>
     <p className="mt-1 text-sm text-slate-500">نفس اسم الخامة يزود رصيدها عند الشراء مرة ثانية. سعر الشراء يتسجل في المصروفات تلقائيًا.</p>
+    </div><button type="button" aria-label="إغلاق" onClick={() => dialog.current?.close()} className="shrink-0 rounded-lg px-2 text-2xl text-slate-500 hover:bg-slate-100">×</button></div>
     {message && <p role="status" className="mt-4 rounded-xl bg-amber-50 p-3 text-sm text-slate-800">{message}</p>}
     <form onSubmit={save} className="mt-5 grid gap-4 sm:grid-cols-2">
       <label className="text-sm font-semibold">النوع<select value={category} onChange={(event) => setCategory(event.target.value)} className={inputClass}>{categories.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
@@ -68,5 +77,7 @@ export function QuickStockForm({ extraCategories }: { extraCategories: Category[
     </form>
     <button type="button" onClick={() => setShowNewCategory((current) => !current)} className="mt-5 text-sm font-semibold text-[#315b4c] underline">+ إضافة نوع جديد غير الأربعة</button>
     {showNewCategory && <div className="mt-3 flex flex-col gap-2 sm:flex-row"><input value={newCategory} onChange={(event) => setNewCategory(event.target.value)} maxLength={100} placeholder="اسم النوع الجديد" className={inputClass} /><button type="button" onClick={addCategory} disabled={!newCategory.trim() || busy} className="rounded-xl bg-[#263b35] px-5 py-3 text-sm font-semibold text-white disabled:opacity-50">إضافة النوع</button></div>}
-  </section>;
+    </section>
+    </dialog>
+  </div>;
 }
