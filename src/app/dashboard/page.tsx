@@ -17,6 +17,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const cards = [
     { label: "إجمالي المبيعات", value: money(report.sales.gross, currency), mark: "↗" },
     { label: "صافي المبيعات", value: money(report.sales.net, currency), mark: "◈" },
+    { label: "الدفعات المستلمة من الطلبات اليدوية", value: money(report.cash.received, currency), mark: "●", hint: `ديبوزت ${money(report.cash.deposits, currency)} · باقي الطلبات المسلّمة ${money(report.cash.deliveryBalances, currency)}؛ قبل أي ردّ مبالغ` },
     { label: "الطلبات", value: String(report.sales.orders), mark: "◫" },
     { label: "الوحدات المباعة", value: String(report.sales.units), mark: "▤" },
     { label: "المرتجعات", value: String(report.returns.count), mark: "↶" },
