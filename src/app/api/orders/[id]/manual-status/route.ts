@@ -20,7 +20,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if (error instanceof z.ZodError) return NextResponse.json({ error: "حالة غير صحيحة" }, { status: 422 });
     if (error instanceof Error && error.message === "UNAUTHORIZED") return NextResponse.json({ error: "سجّل الدخول أولًا" }, { status: 401 });
     if (error instanceof Error && /غير موجود|ليس طلبًا يدويًا/.test(error.message)) return NextResponse.json({ error: error.message }, { status: 404 });
-    if (error instanceof Error && /غير صحيح|تعذر خصم|لا يمكن|تغيرت|تعذر إنشاء|processed|restock|Restock|consumption|Manual return/.test(error.message)) return NextResponse.json({ error: error.message }, { status: 409 });
+    if (error instanceof Error && /غير صحيح|تعذر خصم|لا يمكن|يمكن إرجاع|تغيرت|تعذر إنشاء|processed|restock|Restock|consumption|Manual return/.test(error.message)) return NextResponse.json({ error: error.message }, { status: 409 });
     console.error("Manual order status update failed", error);
     return NextResponse.json({ error: "تعذر تحديث الطلب" }, { status: 500 });
   }
