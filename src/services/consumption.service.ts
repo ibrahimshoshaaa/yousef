@@ -107,7 +107,8 @@ function round(n: number): number {
  */
 export async function processOrderConsumption(
   storeId: string,
-  orderId: string
+  orderId: string,
+  options: { forceForManualPreparation?: boolean } = {}
 ): Promise<{
   triggered: boolean;
   consumed: number;
@@ -116,12 +117,13 @@ export async function processOrderConsumption(
 }> {
   const order = await db.order.findFirst({
     where: { id: orderId, storeId },
-    select: { id: true, financialStatus: true, fulfillmentStatus: true, orderNumber: true },
+    select: { id: true, financialStatus: true, fulfillmentStatus: true, orderNumber: true, manualStatus: true },
   });
   if (!order) throw new Error("Order not found");
+  if (options.forceForManualPreparation && !order.manualStatus) throw new Error("Manual order required");
 
   const trigger = await getSetting(storeId, "orderConsumptionTrigger");
-  if (!isTriggerSatisfied(trigger, order)) {
+  if (!options.forceForManualPreparation && !isTriggerSatisfied(trigger, order)) {
     return { triggered: false, consumed: 0, skipped: 0, failed: 0 };
   }
 

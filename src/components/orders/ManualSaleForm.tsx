@@ -12,7 +12,11 @@ export function ManualSaleForm({ variants }: { variants: Variant[] }) {
   const nextKey = useRef(1);
   const requestId = useRef<string | null>(null);
   const [lines, setLines] = useState<Line[]>([{ key: 0, variantId: "", quantity: "1", unitPrice: "" }]);
-  const [customerRef, setCustomerRef] = useState("");
+  const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [customerAddress, setCustomerAddress] = useState("");
+  const [hasDeposit, setHasDeposit] = useState(false);
+  const [depositAmount, setDepositAmount] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const fieldClass = "mt-2 block w-full min-w-0 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-[#96723c]";
@@ -35,15 +39,15 @@ export function ManualSaleForm({ variants }: { variants: Variant[] }) {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           requestId: requestId.current,
-          customerRef: customerRef.trim(),
+          customerName: customerName.trim(), customerPhone: customerPhone.trim(),
+          customerAddress: customerAddress.trim(), hasDeposit, depositAmount: hasDeposit ? Number(depositAmount) : 0,
           items: lines.map((line) => ({ variantId: line.variantId, quantity: Number(line.quantity), unitPrice: Number(line.unitPrice) })),
         }),
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "تعذر حفظ البيع");
-      const attention = !result.data.consumption.triggered || result.data.consumption.failed > 0 || result.data.consumption.skipped > 0;
       requestId.current = null;
-      router.push(`/dashboard/orders?manual=created${attention ? `&attention=${encodeURIComponent(result.data.orderId)}` : ""}`);
+      router.push(`/dashboard/orders?manual=created`);
       router.refresh();
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : "تعذر حفظ البيع");
@@ -70,9 +74,15 @@ export function ManualSaleForm({ variants }: { variants: Variant[] }) {
       <button type="button" onClick={() => setLines((current) => [...current, { key: nextKey.current++, variantId: "", quantity: "1", unitPrice: "" }])} disabled={busy || lines.length >= 30} className="rounded-xl border border-[#263b35] px-4 py-2.5 text-sm font-semibold text-[#263b35] disabled:opacity-50">+ إضافة صنف آخر</button>
     </section>
     <section className="space-y-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
-      <label className="block text-sm font-medium text-slate-700">اسم العميل أو رقم مرجعي (اختياري)<input maxLength={100} value={customerRef} onChange={(event) => setCustomerRef(event.target.value)} placeholder="مثال: عميل المحل" className={fieldClass} /></label>
-      <div className="flex flex-wrap items-center justify-between gap-4 border-t border-slate-100 pt-5"><div><p className="text-sm text-slate-500">الإجمالي المدفوع</p><strong className="text-2xl text-slate-900">{total.toFixed(2)} EGP</strong></div><button type="submit" disabled={busy || !variants.length || total <= 0} className="w-full rounded-xl bg-[#263b35] px-6 py-3.5 text-sm font-semibold text-white disabled:opacity-50 sm:w-auto">{busy ? "جارٍ تسجيل البيع..." : "تأكيد البيع"}</button></div>
-      <p className="text-xs leading-6 text-slate-500">يُسجَّل البيع كمدفوع. لو الوصفة ناقصة أو المخزون غير كافٍ، سيظهر الطلب في «الاستهلاك» للمراجعة، ولن تختفي عملية البيع.</p>
+      <div><h2 className="text-lg font-semibold">بيانات العميل والتوصيل</h2><p className="mt-1 text-sm text-slate-500">احتفظ ببيانات التواصل والشحن مع الطلب.</p></div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <label className="text-sm font-medium text-slate-700">اسم العميل *<input required maxLength={100} value={customerName} onChange={(event) => setCustomerName(event.target.value)} placeholder="اسم العميل" className={fieldClass} /></label>
+        <label className="text-sm font-medium text-slate-700">رقم الهاتف *<input required type="tel" minLength={7} maxLength={30} value={customerPhone} onChange={(event) => setCustomerPhone(event.target.value)} placeholder="رقم للتواصل" className={fieldClass} /></label>
+      </div>
+      <label className="block text-sm font-medium text-slate-700">عنوان التوصيل *<textarea required minLength={5} maxLength={500} rows={3} value={customerAddress} onChange={(event) => setCustomerAddress(event.target.value)} placeholder="المحافظة، المنطقة، الشارع والعلامة المميزة" className={fieldClass} /></label>
+      <div className="rounded-xl bg-slate-50 p-4"><label className="flex items-center gap-2 text-sm font-medium text-slate-700"><input type="checkbox" checked={hasDeposit} onChange={(event) => { setHasDeposit(event.target.checked); if (!event.target.checked) setDepositAmount(""); }} /> دفع ديبوزت</label>{hasDeposit && <label className="mt-3 block text-sm font-medium text-slate-700">قيمة الديبوزت (EGP) *<input required type="number" min="0.01" max={Math.max(0, total - 0.01).toFixed(2)} step="0.01" inputMode="decimal" value={depositAmount} onChange={(event) => setDepositAmount(event.target.value)} className={fieldClass} /></label>}</div>
+      <div className="flex flex-wrap items-center justify-between gap-4 border-t border-slate-100 pt-5"><div><p className="text-sm text-slate-500">إجمالي الطلب</p><strong className="text-2xl text-slate-900">{total.toFixed(2)} EGP</strong><p className="mt-1 text-sm text-slate-500">المتبقي عند التسليم: {Math.max(0, total - (hasDeposit ? Number(depositAmount) || 0 : 0)).toFixed(2)} EGP</p></div><button type="submit" disabled={busy || !variants.length || total <= 0} className="w-full rounded-xl bg-[#263b35] px-6 py-3.5 text-sm font-semibold text-white disabled:opacity-50 sm:w-auto">{busy ? "جارٍ تسجيل الطلب..." : "تأكيد الطلب"}</button></div>
+      <p className="text-xs leading-6 text-slate-500">يبدأ الطلب «قيد التجهيز» بدون اعتباره مدفوعًا بالكامل. عند وضعه «تم التجهيز» تُخصم خامات الوصفة، وبعد تسليمه للعميل يُحدّث إلى «تم التسليم» ومدفوع.</p>
     </section>
   </form>;
 }

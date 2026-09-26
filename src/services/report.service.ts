@@ -11,15 +11,15 @@ export async function getBusinessReport(storeId: string, options: { period?: str
   const range = getReportRange(store.timezone, options.period, options.from, options.to);
   const between = { gte: range.start, lt: range.endExclusive };
   const [orders, returns, expenses, consumptions, balances, transactions, costingEnabled, unmatchedCurrencyOrders, orderConsumptions] = await Promise.all([
-    db.order.findMany({ where: { storeId, currency: store.currency, occurredAt: between }, include: { items: { include: { variant: { include: { product: true } } } } }, orderBy: { occurredAt: "asc" } }),
+    db.order.findMany({ where: { storeId, currency: store.currency, occurredAt: between, OR: [{ manualStatus: null }, { manualStatus: "DELIVERED" }] }, include: { items: { include: { variant: { include: { product: true } } } } }, orderBy: { occurredAt: "asc" } }),
     db.return.findMany({ where: { storeId, createdAt: between, order: { currency: store.currency } }, include: { items: { include: { orderItem: { include: { variant: { include: { product: true } } } } } } } }),
     db.expense.findMany({ where: { storeId, date: between }, include: { category: true }, orderBy: { date: "desc" } }),
     db.consumption.findMany({ where: { storeId, createdAt: between }, include: { items: { include: { material: true } }, recipeVersion: { include: { items: { include: { material: true } } } } } }),
     db.inventoryBalance.findMany({ where: { storeId }, include: { material: { include: { materialType: true } } } }),
     db.inventoryTransaction.findMany({ where: { storeId, createdAt: between }, include: { material: true } }),
     isCostingEnabled(storeId),
-    db.order.count({ where: { storeId, currency: { not: store.currency }, occurredAt: between } }),
-    db.consumption.findMany({ where: { storeId, order: { currency: store.currency, occurredAt: between } }, include: { recipeVersion: { include: { items: { include: { material: true } } } } } }),
+    db.order.count({ where: { storeId, currency: { not: store.currency }, occurredAt: between, OR: [{ manualStatus: null }, { manualStatus: "DELIVERED" }] } }),
+    db.consumption.findMany({ where: { storeId, order: { currency: store.currency, occurredAt: between, OR: [{ manualStatus: null }, { manualStatus: "DELIVERED" }] } }, include: { recipeVersion: { include: { items: { include: { material: true } } } } } }),
   ]);
 
   const sales = { gross: 0, discounts: 0, refunded: 0, net: 0, units: 0, orders: orders.length, averageOrderValue: 0 };
