@@ -39,7 +39,7 @@ export async function processReturn(input: { storeId: string; returnId: string; 
   if (!Number.isFinite(cost) || cost < 0) throw new Error("Invalid return cost");
   const store = await db.store.findUniqueOrThrow({ where: { id: input.storeId } });
   return db.$transaction(async tx => {
-    const ret = await tx.return.findFirst({ where: { id: input.returnId, storeId: input.storeId }, include: { items: { include: { orderItem: { include: { consumption: { include: { items: true } } } } } } } });
+    const ret = await tx.return.findFirst({ where: { id: input.returnId, storeId: input.storeId }, include: { order: { include: { items: true } }, items: { include: { orderItem: { include: { consumption: { include: { items: true } } } } } } } });
     if (!ret) throw new Error("Return not found");
     if (ret.processedAt) throw new Error("Return already processed");
     if (ret.items.some(i => Number(i.quantity) <= 0 || Number(i.quantity) > Number(i.orderItem.quantity))) throw new Error("Invalid return quantity");
@@ -48,6 +48,7 @@ export async function processReturn(input: { storeId: string; returnId: string; 
     for (const item of ret.items) {
       const decision = byId.get(item.id);
       if (!decision) throw new Error("Invalid return item");
+      if (ret.order.manualStatus && (decision.condition !== "GOOD" || decision.restock !== Boolean(item.orderItem.consumption))) throw new Error("Manual return must restore consumed materials");
       if (decision.restock && decision.condition !== "GOOD") throw new Error("Only good items can be restocked");
       if (decision.restock) {
         const consumption = item.orderItem.consumption;
@@ -66,6 +67,15 @@ export async function processReturn(input: { storeId: string; returnId: string; 
     const category = await tx.expenseCategory.upsert({ where: { storeId_name: { storeId: input.storeId, name: "Return Cost" } }, update: {}, create: { storeId: input.storeId, name: "Return Cost" } });
     const expense = await tx.expense.create({ data: { storeId: input.storeId, categoryId: category.id, returnId: ret.id, amount: cost, currency: store.currency, date: new Date(), description: `Return for order ${ret.orderId}`, userId: input.userId } });
     await tx.return.update({ where: { id: ret.id }, data: { status: "PROCESSED", processedAt: new Date(), returnCost: cost } });
+    if (ret.order.manualStatus) {
+      if (ret.items.length !== ret.order.items.length || ret.items.some(item => Number(item.quantity) !== Number(item.orderItem.quantity))) throw new Error("Manual return must include all items");
+      const paidAmount = ret.order.financialStatus === "PAID" ? ret.order.total : ret.order.depositAmount;
+      await tx.order.update({ where: { id: ret.orderId }, data: {
+        manualStatus: "RETURNED", financialStatus: Number(ret.order.depositAmount) > 0 || ret.order.financialStatus === "PAID" ? "REFUNDED" : "VOIDED",
+        fulfillmentStatus: "UNFULFILLED", refunded: paidAmount, netSales: 0,
+      } });
+      for (const item of ret.order.items) await tx.orderItem.update({ where: { id: item.id }, data: { refunded: item.finalLinePrice } });
+    }
     await tx.auditLog.create({ data: { storeId: input.storeId, userId: input.userId, action: "PROCESS_RETURN", entity: "Return", entityId: ret.id, metadata: { expenseId: expense.id, restockedItems: input.items.filter(i => i.restock).map(i => i.id) } } });
     return { returnId: ret.id, expenseId: expense.id };
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });

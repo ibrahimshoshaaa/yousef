@@ -4,11 +4,14 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth-helpers";
 import { can } from "@/lib/rbac";
-import { processOrderConsumption } from "@/services/consumption.service";
 
 const schema = z.object({
   requestId: z.string().uuid(),
-  customerRef: z.string().trim().max(100).optional(),
+  customerName: z.string().trim().min(2).max(100),
+  customerPhone: z.string().trim().min(7).max(30),
+  customerAddress: z.string().trim().min(5).max(500),
+  hasDeposit: z.boolean(),
+  depositAmount: z.number().finite().nonnegative().max(1000000),
   items: z.array(z.object({
     variantId: z.string().min(1),
     quantity: z.number().int().positive().max(10000),
@@ -50,6 +53,9 @@ export async function POST(req: NextRequest) {
       });
       const totalCents = lines.reduce((sum, line) => sum + Math.round(Number(line.finalLinePrice) * 100), 0);
       if (totalCents < 1) return NextResponse.json({ error: "إجمالي البيع لازم يكون أكبر من صفر" }, { status: 422 });
+      const depositCents = Math.round(input.depositAmount * 100);
+      if ((input.hasDeposit && depositCents < 1) || (!input.hasDeposit && depositCents !== 0)) return NextResponse.json({ error: "راجع قيمة الديبوزت" }, { status: 422 });
+      if (depositCents >= totalCents) return NextResponse.json({ error: "الديبوزت لازم يكون أقل من إجمالي الطلب" }, { status: 422 });
       const total = new Prisma.Decimal(totalCents).div(100);
       try {
         order = await db.$transaction(async (tx) => {
@@ -57,12 +63,16 @@ export async function POST(req: NextRequest) {
             id: orderId,
             storeId: session.storeId,
             orderNumber: `M-${input.requestId.slice(0, 8).toUpperCase()}`,
-            financialStatus: "PAID",
-            fulfillmentStatus: "FULFILLED",
+            financialStatus: depositCents > 0 ? "PARTIALLY_PAID" : "PENDING",
+            fulfillmentStatus: "UNFULFILLED",
+            manualStatus: "NEW",
             currency: store.currency,
             subtotal: total, shipping: 0, tax: 0, discount: 0,
             total, refunded: 0, netSales: total,
-            customerRef: input.customerRef || null,
+            customerRef: input.customerName,
+            customerPhone: input.customerPhone,
+            customerAddress: input.customerAddress,
+            depositAmount: new Prisma.Decimal(depositCents).div(100),
             occurredAt: new Date(),
             items: { create: lines },
           } });
@@ -76,8 +86,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const consumption = await processOrderConsumption(session.storeId, order.id);
-    return NextResponse.json({ data: { orderId: order.id, consumption } });
+    return NextResponse.json({ data: { orderId: order.id } });
   } catch (error) {
     if (error instanceof z.ZodError) return NextResponse.json({ error: "راجع بيانات البيع", issues: error.issues }, { status: 422 });
     if (error instanceof Error && error.message === "UNAUTHORIZED") return NextResponse.json({ error: "سجّل الدخول أولًا" }, { status: 401 });

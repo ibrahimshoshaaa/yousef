@@ -305,3 +305,22 @@ npm run db:studio    # Prisma Studio
 - Gross order sales are stored total plus order discounts. Net order sales are the stored total after refunds. Product rows use line-item amounts and therefore exclude order shipping/taxes. Expense totals already include linked return-cost expenses; do not add the return-cost KPI to expenses again. Orders in another currency are excluded from order sales and visibly counted rather than silently added to the store currency.
 - Estimated profitability is shown only when costing is enabled. It uses recorded order consumptions and default material costs; missing costs or unconsumed order lines flag the estimate as incomplete. This is not an accounting profit figure and excludes operating expenses.
 - All dashboard routes are dynamically rendered. This fixes a pre-existing build failure from attempted database access during prerendering when no `DATABASE_URL` is available at build time. Production requests require a configured database and a bootstrapped owner (see `DEPLOYMENT.md`).
+
+### Manual order fulfillment migration (September 2026)
+
+The manual-order workflow adds customer phone/address, a deposit, and a fulfillment
+stage to `Order` through `prisma/migrations/20260926030000_manual_order_fulfillment`.
+The application must not run the new code against an unmigrated production database.
+Before merging the feature PR into `main`, run the existing **Apply production database
+migrations** GitHub Actions workflow using the feature branch as its ref. Confirm
+that `prisma migrate deploy` and `prisma migrate status` both pass. This requires
+`PRODUCTION_DATABASE_URL` in the GitHub `production` environment. Then merge the PR
+and verify the Vercel deployment. Existing manual orders are marked delivered by
+the migration; if any were created between applying the migration and deploying the
+feature, review their stage manually.
+
+New manual orders start unpaid (or partially paid with a deposit). Preparation
+consumes their recipe materials regardless of the Shopify consumption trigger.
+Returning a shipped or delivered manual order restores every recorded material
+consumption, records a 95 EGP return expense, and removes that order from sales
+figures. Cash or deposit refunds must still be settled outside this application.

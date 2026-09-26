@@ -512,6 +512,10 @@ model Order {
   refunded        Decimal?    @db.Decimal(18, 4)
   netSales        Decimal?    @db.Decimal(18, 4)
   customerRef     String?
+  customerPhone   String?
+  customerAddress String?
+  depositAmount   Decimal     @default(0) @db.Decimal(18, 4)
+  manualStatus    String?
   occurredAt      DateTime
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt

@@ -13,7 +13,7 @@ export default async function NewManualSalePage() {
     orderBy: { product: { title: "asc" } },
   });
   return <main className="mx-auto max-w-3xl space-y-6 px-4 py-6 sm:px-8 sm:py-9">
-    <header><Link href="/dashboard/orders" className="text-sm font-semibold text-[#315b4c] hover:underline">← الطلبات</Link><h1 className="mt-3 text-3xl font-bold text-slate-900">تسجيل بيع يدوي</h1><p className="mt-2 text-sm leading-6 text-slate-600">للبيع من المحل أو أي قناة خارج Shopify. البيع يُضاف للتقارير، وتُخصم خامات الوصفة عند توفرها.</p></header>
+    <header><Link href="/dashboard/orders" className="text-sm font-semibold text-[#315b4c] hover:underline">← الطلبات</Link><h1 className="mt-3 text-3xl font-bold text-slate-900">إضافة طلب</h1><p className="mt-2 text-sm leading-6 text-slate-600">سجّل المنتجات وبيانات العميل والديبوزت، ثم تابع التجهيز والشحن والتسليم من صفحة الطلبات.</p></header>
     <ManualSaleForm variants={variants.map((variant) => ({ id: variant.id, label: `${variant.product.title} · ${variant.title}`, price: Number(variant.price) }))} />
   </main>;
 }
