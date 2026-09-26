@@ -32,6 +32,7 @@ export function NewProductForm() {
       }
 
       const { data } = await res.json();
+      window.dispatchEvent(new Event("dashboard-navigation-start"));
       router.push(`/dashboard/products/${data.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "حدث خطأ");

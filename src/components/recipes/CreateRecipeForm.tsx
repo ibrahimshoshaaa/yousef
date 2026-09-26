@@ -70,6 +70,7 @@ export function CreateRecipeForm({ variants, materials, preselectedVariantId }: 
       }
 
       const { data } = await res.json();
+      window.dispatchEvent(new Event("dashboard-navigation-start"));
       router.push(`/dashboard/recipes/${data.recipe.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "حدث خطأ");
