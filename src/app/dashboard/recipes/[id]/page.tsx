@@ -46,7 +46,7 @@ export default async function RecipeDetailPage({
   }));
 
   return (
-    <div className="p-4 md:p-8">
+    <div className="min-w-0 p-4 md:p-8">
       <div className="mb-6">
         <Link
           href="/dashboard/recipes"
@@ -54,15 +54,15 @@ export default async function RecipeDetailPage({
         >
           ← الوصفات
         </Link>
-        <h1 className="mt-2 text-2xl font-bold">{recipe.name}</h1>
-        <p className="text-sm text-gray-500">
+        <h1 className="mt-2 break-words text-2xl font-bold">{recipe.name}</h1>
+        <p className="break-words text-sm text-gray-500">
           {recipe.variant.product.title} — {recipe.variant.title}
         </p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid min-w-0 gap-6 lg:grid-cols-2">
         {/* Current version */}
-        <div className="rounded-xl border border-[var(--border)] bg-white p-6">
+        <div className="min-w-0 rounded-xl border border-[var(--border)] bg-white p-4 sm:p-6">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="font-semibold">
               النسخة الحالية {current ? `— v${current.version}` : ""}
@@ -71,10 +71,10 @@ export default async function RecipeDetailPage({
 
           {current ? (
             <>
-              <table className="w-full text-sm">
+              <table className="w-full table-fixed text-sm">
                 <thead>
                   <tr className="border-b border-[var(--border)] text-right text-xs text-gray-500">
-                    <th className="py-2">المادة</th>
+                    <th className="w-1/2 py-2">المادة</th>
                     <th className="py-2 text-center">الكمية</th>
                     {costingEnabled && <th className="py-2 text-center">التكلفة</th>}
                   </tr>
@@ -87,12 +87,12 @@ export default async function RecipeDetailPage({
                     const hasCost = line !== undefined && line.unitCost !== null;
                     return (
                       <tr key={item.id} className="border-b border-[var(--border)] last:border-0">
-                        <td className="py-2">{item.material.name}</td>
-                        <td className="py-2 text-center font-mono">
+                        <td className="break-words py-2">{item.material.name}</td>
+                        <td className="break-words py-2 text-center font-mono">
                           {Number(item.quantity)} {item.unit}
                         </td>
                         {costingEnabled && (
-                          <td className="py-2 text-center font-mono">
+                          <td className="break-words py-2 text-center font-mono">
                             {hasCost ? line.lineCost.toFixed(2) : "—"}
                           </td>
                         )}
@@ -103,7 +103,7 @@ export default async function RecipeDetailPage({
               </table>
 
               {costingEnabled && currentCost && (
-                <div className="mt-4 flex items-center justify-between border-t border-[var(--border)] pt-3">
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-[var(--border)] pt-3">
                   <span className="text-sm text-gray-500">التكلفة التقديرية الإجمالية</span>
                   <span className="font-mono font-semibold">
                     {currentCost.total.toFixed(2)} EGP
@@ -122,7 +122,7 @@ export default async function RecipeDetailPage({
         </div>
 
         {/* New version form */}
-        <div className="rounded-xl border border-[var(--border)] bg-white p-6">
+        <div className="min-w-0 rounded-xl border border-[var(--border)] bg-white p-4 sm:p-6">
           <h2 className="mb-4 font-semibold">إنشاء نسخة جديدة</h2>
           <NewVersionForm
             recipeId={recipe.id}
@@ -133,11 +133,11 @@ export default async function RecipeDetailPage({
       </div>
 
       {/* Version history */}
-      <div className="mt-6 rounded-xl border border-[var(--border)] bg-white p-6">
+      <div className="mt-6 min-w-0 rounded-xl border border-[var(--border)] bg-white p-4 sm:p-6">
         <h2 className="mb-4 font-semibold">سجل النسخ</h2>
         <div className="space-y-3">
           {recipe.versions.map((v) => (
-            <div key={v.id} className="rounded-lg border border-[var(--border)] p-4">
+            <div key={v.id} className="min-w-0 rounded-lg border border-[var(--border)] p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <span className="font-medium">النسخة {v.version}</span>
@@ -159,7 +159,7 @@ export default async function RecipeDetailPage({
                   <ActivateVersionButton recipeId={recipe.id} versionId={v.id} />
                 )}
               </div>
-              <div className="mt-2 text-xs text-gray-500">
+              <div className="mt-2 break-words text-xs text-gray-500">
                 {v.items.map((it) => `${it.material.name}: ${Number(it.quantity)} ${it.unit}`).join(" · ")}
               </div>
             </div>
