@@ -5,7 +5,7 @@ import { can } from "@/lib/rbac";
 import { listExpenses } from "@/services/finance.service";
 import { ExpenseForms } from "@/components/finance/ExpenseForms";
 
-export default async function ExpensesPage({ searchParams }: { searchParams: Promise<{ category?: string }> }) {
+export default async function ExpensesPage({ searchParams }: { searchParams: Promise<{ category?: string; add?: string }> }) {
   const session = await requireAuth();
   if (!can(session.role, "expenses.read")) throw new Error("Forbidden");
   const store = await db.store.findUnique({ where: { id: session.storeId } });
@@ -13,7 +13,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
     listExpenses(store.id),
     db.expenseCategory.findMany({ where: { storeId: store.id, active: true }, orderBy: { name: "asc" } }),
   ]) : [[], []];
-  const { category: requestedCategory } = await searchParams;
+  const { category: requestedCategory, add } = await searchParams;
   // Historical expenses can belong to categories that are no longer active.
   const filterCategories = [...new Map([...categories, ...expenses.map((expense) => expense.category)].map((category) => [category.id, category])).values()]
     .sort((a, b) => a.name.localeCompare(b.name, "ar"));
@@ -27,7 +27,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
   return <main className="mx-auto max-w-6xl space-y-6 px-4 py-6 sm:px-8 sm:py-9">
     <header className="flex flex-wrap items-start justify-between gap-4">
       <div><p className="text-sm font-semibold text-[#96723c]">المالية والمخزون</p><h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">المصروفات</h1><p className="mt-2 text-sm text-slate-500">تابع مصروفات المتجر ومشتريات الخامات المسجلة تلقائيًا عند إضافة المخزون.</p></div>
-      {can(session.role, "expenses.write") && <ExpenseForms categories={categories} currency={currency} />}
+      {can(session.role, "expenses.write") && <ExpenseForms categories={categories} currency={currency} initialOpen={add === "1"} />}
     </header>
     <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
       <div className="flex flex-wrap items-center justify-between gap-4">

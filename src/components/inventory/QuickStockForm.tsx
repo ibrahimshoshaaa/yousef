@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 
 type Category = { id: string; name: string };
 const defaults: Category[] = [
@@ -9,9 +9,11 @@ const defaults: Category[] = [
   { id: "BOXES", name: "بوكسات التغليف" }, { id: "TESTERS", name: "زجاجات تيستر" },
 ];
 
-export function QuickStockForm({ extraCategories }: { extraCategories: Category[] }) {
+export function QuickStockForm({ extraCategories, initialOpen = false }: { extraCategories: Category[]; initialOpen?: boolean }) {
   const router = useRouter();
   const dialog = useRef<HTMLDialogElement>(null);
+  const openedInitially = useRef(false);
+  useEffect(() => { if (initialOpen && !openedInitially.current) { openedInitially.current = true; dialog.current?.showModal(); } }, [initialOpen]);
   const requestId = useRef<string | null>(null);
   const [categories, setCategories] = useState([...defaults, ...extraCategories]);
   const [category, setCategory] = useState("OILS");

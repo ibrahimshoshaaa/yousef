@@ -10,7 +10,7 @@ export async function getBusinessReport(storeId: string, options: { period?: str
   const store = await db.store.findUniqueOrThrow({ where: { id: storeId } });
   const range = getReportRange(store.timezone, options.period, options.from, options.to);
   const between = { gte: range.start, lt: range.endExclusive };
-  const [orders, returns, expenses, consumptions, balances, transactions, costingEnabled, unmatchedCurrencyOrders, orderConsumptions] = await Promise.all([
+  const [orders, returns, expenses, consumptions, balances, transactions, costingEnabled, unmatchedCurrencyOrders, orderConsumptions, manualPayments] = await Promise.all([
     db.order.findMany({ where: { storeId, currency: store.currency, occurredAt: between, OR: [{ manualStatus: null }, { manualStatus: "DELIVERED" }] }, include: { items: { include: { variant: { include: { product: true } } } } }, orderBy: { occurredAt: "asc" } }),
     db.return.findMany({ where: { storeId, createdAt: between, order: { currency: store.currency } }, include: { items: { include: { orderItem: { include: { variant: { include: { product: true } } } } } } } }),
     db.expense.findMany({ where: { storeId, date: between }, include: { category: true }, orderBy: { date: "desc" } }),
@@ -20,7 +20,20 @@ export async function getBusinessReport(storeId: string, options: { period?: str
     isCostingEnabled(storeId),
     db.order.count({ where: { storeId, currency: { not: store.currency }, occurredAt: between, OR: [{ manualStatus: null }, { manualStatus: "DELIVERED" }] } }),
     db.consumption.findMany({ where: { storeId, order: { currency: store.currency, occurredAt: between, OR: [{ manualStatus: null }, { manualStatus: "DELIVERED" }] } }, include: { recipeVersion: { include: { items: { include: { material: true } } } } } }),
+    db.order.findMany({ where: { storeId, currency: store.currency, manualStatus: { not: null }, OR: [{ occurredAt: between }, { manualStatus: "DELIVERED", updatedAt: between }] }, select: { occurredAt: true, updatedAt: true, manualStatus: true, depositAmount: true, total: true } }),
   ]);
+
+  // Deposits are cash received when the order is placed, even before delivery.
+  // The remaining balance is received on delivery; neither event changes sales recognition.
+  const cash = { deposits: 0, deliveryBalances: 0, received: 0 };
+  for (const order of manualPayments) {
+    const deposit = n(order.depositAmount);
+    if (order.occurredAt >= range.start && order.occurredAt < range.endExclusive) cash.deposits += deposit;
+    if (order.manualStatus === "DELIVERED" && order.updatedAt >= range.start && order.updatedAt < range.endExclusive) {
+      cash.deliveryBalances += Math.max(0, n(order.total) - deposit);
+    }
+  }
+  cash.received = cash.deposits + cash.deliveryBalances;
 
   const sales = { gross: 0, discounts: 0, refunded: 0, net: 0, units: 0, orders: orders.length, averageOrderValue: 0 };
   const salesByDay = new Map<string, { date: string; gross: number; net: number; orders: number }>();
@@ -97,6 +110,7 @@ export async function getBusinessReport(storeId: string, options: { period?: str
     range: { period: range.period, from: range.from, to: range.to, timeZone: store.timezone }, currency: store.currency,
     notes: { excludedDifferentCurrencyOrders: unmatchedCurrencyOrders, salesRefundsAttributedToOriginalOrderDate: true, returnActivityAttributedToReturnDate: true, expenseTotalIncludesReturnCosts: true, costEstimateIncomplete: missingCosts > 0 || orderConsumptions.length < orders.reduce((sum, order) => sum + order.items.length, 0) },
     sales: { ...sales, gross: money(sales.gross), discounts: money(sales.discounts), refunded: money(sales.refunded), net: money(sales.net), averageOrderValue: money(sales.averageOrderValue) },
+    cash: { deposits: money(cash.deposits), deliveryBalances: money(cash.deliveryBalances), received: money(cash.received) },
     salesByDay: [...salesByDay.values()].map(row => ({ ...row, gross: money(row.gross), net: money(row.net) })),
     returns: { ...returnTotals, value: money(returnTotals.value), costs: money(returnTotals.costs) }, returnsByDay: [...returnsByDay.values()].map(row => ({ ...row, value: money(row.value) })),
     returnedProducts: [...returnedProducts.values()].sort((a, b) => b.units - a.units),

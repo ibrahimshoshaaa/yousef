@@ -17,6 +17,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const cards = [
     { label: "إجمالي المبيعات", value: money(report.sales.gross, currency), mark: "↗" },
     { label: "صافي المبيعات", value: money(report.sales.net, currency), mark: "◈" },
+    { label: "الدفعات المستلمة من الطلبات اليدوية", value: money(report.cash.received, currency), mark: "●", hint: `ديبوزت ${money(report.cash.deposits, currency)} · باقي الطلبات المسلّمة ${money(report.cash.deliveryBalances, currency)}؛ قبل أي ردّ مبالغ` },
     { label: "الطلبات", value: String(report.sales.orders), mark: "◫" },
     { label: "الوحدات المباعة", value: String(report.sales.units), mark: "▤" },
     { label: "المرتجعات", value: String(report.returns.count), mark: "↶" },
@@ -35,8 +36,10 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         <div className="flex flex-wrap gap-2">
           {can(session.role, "orders.write") && <Link href="/dashboard/orders/new" className="rounded-xl bg-[#263b35] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#345348]">+ تسجيل طلب</Link>}
           {can(session.role, "products.write") && <Link href="/dashboard/products/new" className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-[#263b35] hover:bg-slate-50">+ إضافة منتج</Link>}
-          {can(session.role, "inventory.read") && <Link href="/dashboard/inventory" className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-[#263b35] hover:bg-slate-50">المخزون</Link>}
-          {can(session.role, "expenses.read") && <Link href="/dashboard/expenses" className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-[#263b35] hover:bg-slate-50">المصروفات</Link>}
+          {can(session.role, "inventory.write") && can(session.role, "expenses.write") && can(session.role, "materials.write") && <Link href="/dashboard/inventory?add=1" className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-[#263b35] hover:bg-slate-50">+ إضافة مخزون</Link>}
+          {can(session.role, "expenses.write") && <Link href="/dashboard/expenses?add=1" className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-[#263b35] hover:bg-slate-50">+ إضافة مصروف</Link>}
+          {can(session.role, "orders.read") && <Link href="/dashboard/orders" className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-[#263b35] hover:bg-slate-50">الطلبات</Link>}
+          {can(session.role, "returns.read") && <Link href="/dashboard/returns" className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-[#263b35] hover:bg-slate-50">المرتجعات</Link>}
         </div>
       </section>
       <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5" aria-label="اختيار الفترة">
