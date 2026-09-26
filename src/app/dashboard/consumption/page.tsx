@@ -89,14 +89,13 @@ async function HistorySection({
         {consumption.length === 0 ? (
           <p className="rounded-xl border border-[var(--border)] bg-white p-8 text-center text-sm text-gray-400">لا يوجد استهلاك مسجل بعد</p>
         ) : consumption.map((c) => (
-          <article key={c.id} className="min-w-0 rounded-xl border border-[var(--border)] bg-white p-4 shadow-sm">
-            <div className="flex flex-wrap items-start justify-between gap-2 border-b border-[var(--border)] pb-3">
-              <Link href={`/dashboard/consumption?orderId=${c.orderId}`} className="break-all text-sm font-semibold text-blue-600 hover:underline">
-                طلب #{c.order.orderNumber ?? c.orderId}
-              </Link>
-              <time className="text-xs text-gray-500" dateTime={new Date(c.createdAt).toISOString()}>{new Date(c.createdAt).toLocaleString("ar-EG")}</time>
-            </div>
-            <p className="mt-3 break-words font-medium text-gray-900">{c.variant.product.title} ({c.variant.title})</p>
+          <details key={c.id} className="group min-w-0 rounded-xl border border-[var(--border)] bg-white shadow-sm">
+            <summary className="flex cursor-pointer list-none items-center gap-3 p-4 marker:hidden [&::-webkit-details-marker]:hidden">
+              <div className="min-w-0 flex-1"><p className="break-all text-sm font-semibold text-gray-900">طلب #{c.order.orderNumber ?? c.orderId}</p><p className="mt-1 break-words text-xs text-gray-500">{c.variant.product.title} ({c.variant.title}) · {Number(c.quantity).toFixed(2)} · {new Date(c.createdAt).toLocaleDateString("ar-EG")}</p></div>
+              <span aria-hidden="true" className="shrink-0 text-lg text-gray-500 transition-transform group-open:rotate-180">⌄</span>
+            </summary>
+            <div className="border-t border-[var(--border)] px-4 pb-4 pt-3">
+            <Link href={`/dashboard/consumption?orderId=${c.orderId}`} className="text-sm text-blue-600 hover:underline">تصفية برقم الطلب ←</Link>
             <div className="mt-3 flex flex-wrap gap-2 text-xs">
               <span className="rounded-lg bg-gray-100 px-3 py-2 text-gray-700">الكمية المباعة: {Number(c.quantity).toFixed(2)}</span>
               <span className="rounded-lg bg-gray-100 px-3 py-2 text-gray-700">الوصفة: v{c.recipeVersion.version}</span>
@@ -110,7 +109,8 @@ async function HistorySection({
                 </li>)}
               </ul>
             </div>
-          </article>
+            </div>
+          </details>
         ))}
       </div>
       <div className="hidden overflow-x-auto rounded-xl border border-[var(--border)] bg-white md:block">
