@@ -38,17 +38,17 @@ export function RecipeItemsFieldset({ materials, rows, onChange }: Props) {
   }
 
   return (
-    <div className="space-y-2">
+    <div className="min-w-0 space-y-2">
       <label className="block text-xs font-medium text-gray-600">
         المواد الداخلة في الوصفة <span className="text-red-500">*</span>
       </label>
 
       {rows.map((row, index) => (
-        <div key={index} className="flex items-center gap-2">
+        <div key={index} className="grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-center gap-2 sm:flex">
           <select
             value={row.materialId}
             onChange={(e) => updateRow(index, { materialId: e.target.value })}
-            className="min-w-0 flex-[2] rounded-lg border border-[var(--border)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
+            className="col-span-3 w-full min-w-0 rounded-lg border border-[var(--border)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)] sm:col-auto sm:flex-[2]"
           >
             <option value="">اختر المادة...</option>
             {materials.map((m) => (
@@ -64,14 +64,14 @@ export function RecipeItemsFieldset({ materials, rows, onChange }: Props) {
             placeholder="الكمية"
             value={row.quantity}
             onChange={(e) => updateRow(index, { quantity: e.target.value })}
-            className="w-24 flex-none rounded-lg border border-[var(--border)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
+            className="w-full min-w-0 rounded-lg border border-[var(--border)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)] sm:w-24 sm:flex-none"
           />
           <input
             type="text"
             placeholder="الوحدة"
             value={row.unit}
             onChange={(e) => updateRow(index, { unit: e.target.value })}
-            className="w-20 flex-none rounded-lg border border-[var(--border)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
+            className="w-full min-w-0 rounded-lg border border-[var(--border)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)] sm:w-20 sm:flex-none"
           />
           <button
             type="button"
