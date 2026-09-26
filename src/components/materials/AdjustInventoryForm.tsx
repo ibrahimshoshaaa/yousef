@@ -89,7 +89,7 @@ export function AdjustInventoryForm({
         <label className="mb-1 block text-xs font-medium text-gray-600">
           نوع التسوية — {materialName}
         </label>
-        <div className="flex gap-2">
+        <div className="grid grid-cols-3 gap-2">
           {(
             [
               ["add", "إضافة"],
@@ -101,10 +101,10 @@ export function AdjustInventoryForm({
               key={val}
               type="button"
               onClick={() => setMode(val)}
-              className={`flex-1 rounded-lg border px-3 py-2 text-sm transition ${
+              className={`min-h-11 rounded-xl border px-1 py-2 text-xs font-semibold sm:text-sm transition ${
                 mode === val
-                  ? "border-[var(--accent)] bg-[var(--accent)] text-white"
-                  : "border-[var(--border)] bg-white text-gray-600 hover:bg-gray-50"
+                  ? "border-[#263b35] bg-[#263b35] text-white"
+                  : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
               }`}
             >
               {label}
@@ -125,7 +125,7 @@ export function AdjustInventoryForm({
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
           placeholder="0.000"
-          className="w-full rounded-lg border border-[var(--border)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
+          className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#315b4c]"
         />
         {newBalance !== null && (
           <p className="mt-1 text-xs text-gray-500">
@@ -147,7 +147,7 @@ export function AdjustInventoryForm({
           value={reason}
           onChange={(e) => setReason(e.target.value)}
           placeholder="مثال: شراء جديد، تصحيح جرد..."
-          className="w-full rounded-lg border border-[var(--border)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
+          className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#315b4c]"
         />
       </div>
 
@@ -160,7 +160,7 @@ export function AdjustInventoryForm({
           value={note}
           onChange={(e) => setNote(e.target.value)}
           rows={2}
-          className="w-full rounded-lg border border-[var(--border)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)] resize-none"
+          className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#315b4c] resize-none"
         />
       </div>
 
@@ -178,7 +178,7 @@ export function AdjustInventoryForm({
       <button
         type="submit"
         disabled={loading}
-        className="w-full rounded-lg bg-[var(--accent)] py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+        className="w-full rounded-xl bg-[#263b35] px-4 py-3 text-sm font-semibold text-white hover:bg-[#345348] disabled:opacity-50"
       >
         {loading ? "جاري الحفظ..." : "تأكيد التسوية"}
       </button>
