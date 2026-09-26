@@ -85,8 +85,36 @@ async function HistorySection({
           </Link>
         )}
       </div>
-      <div className="overflow-x-auto rounded-xl border border-[var(--border)] bg-white">
-        <table className="w-full text-sm">
+      <div className="space-y-3 md:hidden">
+        {consumption.length === 0 ? (
+          <p className="rounded-xl border border-[var(--border)] bg-white p-8 text-center text-sm text-gray-400">لا يوجد استهلاك مسجل بعد</p>
+        ) : consumption.map((c) => (
+          <article key={c.id} className="min-w-0 rounded-xl border border-[var(--border)] bg-white p-4 shadow-sm">
+            <div className="flex flex-wrap items-start justify-between gap-2 border-b border-[var(--border)] pb-3">
+              <Link href={`/dashboard/consumption?orderId=${c.orderId}`} className="break-all text-sm font-semibold text-blue-600 hover:underline">
+                طلب #{c.order.orderNumber ?? c.orderId}
+              </Link>
+              <time className="text-xs text-gray-500" dateTime={new Date(c.createdAt).toISOString()}>{new Date(c.createdAt).toLocaleString("ar-EG")}</time>
+            </div>
+            <p className="mt-3 break-words font-medium text-gray-900">{c.variant.product.title} ({c.variant.title})</p>
+            <div className="mt-3 flex flex-wrap gap-2 text-xs">
+              <span className="rounded-lg bg-gray-100 px-3 py-2 text-gray-700">الكمية المباعة: {Number(c.quantity).toFixed(2)}</span>
+              <span className="rounded-lg bg-gray-100 px-3 py-2 text-gray-700">الوصفة: v{c.recipeVersion.version}</span>
+            </div>
+            <div className="mt-4 border-t border-[var(--border)] pt-3">
+              <h3 className="mb-2 text-xs font-semibold text-gray-500">المواد المستهلكة</h3>
+              <ul className="space-y-2 text-sm text-gray-700">
+                {c.items.map((item) => <li key={item.id} className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
+                  <span className="min-w-0 flex-1 break-words">{item.material.name}</span>
+                  <span className="shrink-0">{Number(item.quantity).toFixed(2)} {item.unit}</span>
+                </li>)}
+              </ul>
+            </div>
+          </article>
+        ))}
+      </div>
+      <div className="hidden overflow-x-auto rounded-xl border border-[var(--border)] bg-white md:block">
+        <table className="w-full min-w-[780px] text-sm">
           <thead>
             <tr className="border-b border-[var(--border)] bg-gray-50 text-right text-xs text-gray-500">
               <th className="px-4 py-3">التاريخ</th>
