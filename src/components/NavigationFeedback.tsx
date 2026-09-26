@@ -44,7 +44,7 @@ export function NavigationFeedback() {
   }, [route]);
 
   if (!busy) return null;
-  return <div role="status" aria-live="polite" className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-[#f6f7f8]/95 px-6">
-    <div className="text-center"><div className="mx-auto size-11 animate-spin rounded-full border-4 border-[#dce8df] border-t-[#263b35]" aria-hidden="true" /><p className="mt-4 font-semibold text-[#263b35]">جارٍ فتح الصفحة…</p><p className="mt-1 text-sm text-slate-500">لحظات ونجهز البيانات</p></div>
+  return <div role="status" aria-label="جارٍ التحميل" className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-[#f6f7f8]/95 px-6">
+    <div className="size-11 animate-spin rounded-full border-4 border-[#dce8df] border-t-[#263b35]" aria-hidden="true" />
   </div>;
 }
