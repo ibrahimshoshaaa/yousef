@@ -15,6 +15,11 @@
 
 import type { ShopifyOrderNode, ShopifyProductNode, PageInfo } from "./types";
 
+const ORDER_CONTACT_FIELDS = `
+  shippingAddress { name phone address1 address2 city province country zip }
+  billingAddress { name phone address1 address2 city province country zip }
+`;
+
 export class ShopifyApiError extends Error {
   constructor(
     message: string,
@@ -35,6 +40,18 @@ export class ShopifyClient {
 
   private endpoint() {
     return `https://${this.shopDomain}/admin/api/${this.apiVersion}/graphql.json`;
+  }
+
+  /** Contact access depends on the app's protected customer data permissions. */
+  private async orderQuery<T>(query: string, variables: Record<string, unknown>): Promise<T> {
+    try {
+      return await this.graphql<T>(query, variables);
+    } catch (error) {
+      if (!(error instanceof ShopifyApiError) || !/access denied|protected customer data/i.test(error.message)) {
+        throw error;
+      }
+      return this.graphql<T>(query.replace(ORDER_CONTACT_FIELDS, ""), variables);
+    }
   }
 
   /** Low-level GraphQL call with one retry on Shopify's THROTTLED cost error. */
@@ -123,7 +140,7 @@ export class ShopifyClient {
     first: number,
     after: string | null
   ): Promise<{ nodes: ShopifyOrderNode[]; pageInfo: PageInfo }> {
-    const data = await this.graphql<{
+    const data = await this.orderQuery<{
       orders: { edges: { node: ShopifyOrderNode }[]; pageInfo: PageInfo };
     }>(
       `query Orders($first: Int!, $after: String) {
@@ -144,6 +161,7 @@ export class ShopifyClient {
               processedAt
               createdAt
               updatedAt
+              ${ORDER_CONTACT_FIELDS}
               lineItems(first: 100) {
                 edges {
                   node {
@@ -181,7 +199,7 @@ export class ShopifyClient {
 
   /** Fetches a single order by its GraphQL gid — used by the order webhooks. */
   async fetchOrderById(gid: string): Promise<ShopifyOrderNode | null> {
-    const data = await this.graphql<{ order: ShopifyOrderNode | null }>(
+    const data = await this.orderQuery<{ order: ShopifyOrderNode | null }>(
       `query OrderById($id: ID!) {
         order(id: $id) {
           id
@@ -198,6 +216,7 @@ export class ShopifyClient {
           processedAt
           createdAt
           updatedAt
+          ${ORDER_CONTACT_FIELDS}
           lineItems(first: 100) {
             edges {
               node {

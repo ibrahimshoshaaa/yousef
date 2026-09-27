@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import type { ShopifyOrderNode } from "@/lib/shopify/types";
+import type { ShopifyOrderAddress, ShopifyOrderNode } from "@/lib/shopify/types";
 import { getClientForStore } from "@/services/shopify/connection.service";
 import { syncRefundsForOrder } from "@/services/shopify/return-sync.service";
 import { processOrderConsumption } from "@/services/consumption.service";
@@ -35,6 +35,16 @@ export async function upsertShopifyOrder(storeId: string, node: ShopifyOrderNode
   const total = num(node.totalPriceSet);
   const refunded = num(node.totalRefundedSet);
   const netSales = total - refunded;
+  const shippingAddress = node.shippingAddress;
+  const billingAddress = node.billingAddress;
+  const customerRef = shippingAddress?.name?.trim() || billingAddress?.name?.trim() || null;
+  const customerPhone = shippingAddress?.phone?.trim() || billingAddress?.phone?.trim() || null;
+  const address = (value: ShopifyOrderAddress | null | undefined) =>
+    [value?.address1, value?.address2, value?.city, value?.province, value?.zip, value?.country]
+      .map(part => part?.trim()).filter(Boolean).join("، ");
+  const customerAddress = address(shippingAddress) || address(billingAddress) || null;
+  // A permission fallback omits both fields. Keep details previously imported in that case.
+  const contactAvailable = "shippingAddress" in node || "billingAddress" in node;
 
   const order = await db.$transaction(async (tx) => {
     const upserted = await tx.order.upsert({
@@ -51,6 +61,7 @@ export async function upsertShopifyOrder(storeId: string, node: ShopifyOrderNode
         total,
         refunded,
         netSales,
+        ...(contactAvailable ? { customerRef, customerPhone, customerAddress } : {}),
         occurredAt: new Date(node.processedAt ?? node.createdAt),
       },
       create: {
@@ -67,6 +78,9 @@ export async function upsertShopifyOrder(storeId: string, node: ShopifyOrderNode
         total,
         refunded,
         netSales,
+        customerRef,
+        customerPhone,
+        customerAddress,
         occurredAt: new Date(node.processedAt ?? node.createdAt),
       },
     });

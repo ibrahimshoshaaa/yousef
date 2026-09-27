@@ -45,6 +45,17 @@ export type ShopifyRefundNode = {
   refundLineItems: { edges: { node: ShopifyRefundLineItemNode }[] };
 };
 
+export type ShopifyOrderAddress = {
+  name: string | null;
+  phone: string | null;
+  address1: string | null;
+  address2: string | null;
+  city: string | null;
+  province: string | null;
+  country: string | null;
+  zip: string | null;
+};
+
 export type ShopifyOrderNode = {
   id: string; // gid://shopify/Order/...
   name: string; // "#1001"
@@ -60,6 +71,8 @@ export type ShopifyOrderNode = {
   processedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  shippingAddress?: ShopifyOrderAddress | null;
+  billingAddress?: ShopifyOrderAddress | null;
   lineItems: { edges: { node: ShopifyOrderLineItemNode }[] };
   refunds: ShopifyRefundNode[];
 };
