@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/lib/db";
@@ -69,6 +70,10 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         </section>
         {session.role === "OWNER" ? <button type="submit" className="rounded-xl bg-[#263b35] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#345348]">حفظ التغييرات</button> : <p className="text-sm text-slate-500">تعديل هذه الإعدادات متاح لمالك المتجر فقط.</p>}
       </form>
+      {can(session.role, "shopify.write") && <section className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-7">
+        <div><h2 className="text-lg font-semibold">ربط Shopify</h2><p className="mt-1 text-sm leading-6 text-slate-500">إدارة اتصال المتجر، المزامنة، ومراجعة حالة الطلبات والمنتجات.</p></div>
+        <Link href="/dashboard/shopify" className="inline-flex w-full shrink-0 items-center justify-center rounded-xl bg-[#263b35] px-5 py-3 text-sm font-semibold text-white hover:bg-[#345348] sm:w-auto">فتح إعدادات Shopify ←</Link>
+      </section>}
       {can(session.role, "materials.write") && <MaterialTypesSettings initialTypes={materialTypes} />}
     </main>
   );
