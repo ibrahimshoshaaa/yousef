@@ -11,41 +11,48 @@ import { getClientForStore } from "@/services/shopify/connection.service";
  */
 export async function upsertShopifyProduct(storeId: string, node: ShopifyProductNode) {
   return db.$transaction(async (tx) => {
-    const product = await tx.product.upsert({
-      where: { storeId_shopifyId: { storeId, shopifyId: node.id } },
-      update: {
-        title: node.title,
-        handle: node.handle,
-        status: node.status,
-      },
-      create: {
-        storeId,
-        shopifyId: node.id,
-        title: node.title,
-        handle: node.handle,
-        status: node.status,
-      },
-    });
+    const existing = await tx.product.findUnique({ where: { storeId_shopifyId: { storeId, shopifyId: node.id } } });
+    const local = !existing && node.handle?.startsWith("erp-")
+      ? await tx.product.findFirst({ where: { storeId, handle: node.handle, shopifyId: null } })
+      : null;
+    const details = { title: node.title, handle: node.handle, status: node.status };
+    const product = local
+      ? await tx.product.update({ where: { id: local.id }, data: { ...details, shopifyId: node.id } })
+      : await tx.product.upsert({
+        where: { storeId_shopifyId: { storeId, shopifyId: node.id } },
+        update: details,
+        create: {
+          storeId,
+          shopifyId: node.id,
+          ...details,
+        },
+      });
 
     for (const edge of node.variants.edges) {
       const v = edge.node;
-      await tx.productVariant.upsert({
-        where: { storeId_shopifyId: { storeId, shopifyId: v.id } },
-        update: {
+      const existingVariant = await tx.productVariant.findUnique({ where: { storeId_shopifyId: { storeId, shopifyId: v.id } } });
+      const localVariant = !existingVariant && product.handle?.startsWith("erp-") && node.variants.edges.length === 1
+        ? await tx.productVariant.findFirst({ where: { storeId, productId: product.id, shopifyId: null } })
+        : null;
+      const variantDetails = {
           productId: product.id,
-          title: v.title,
+          title: v.title === "Default Title" && product.handle?.startsWith("erp-") ? product.title : v.title,
           sku: v.sku,
           price: v.price,
-        },
-        create: {
-          storeId,
-          productId: product.id,
-          shopifyId: v.id,
-          title: v.title,
-          sku: v.sku,
-          price: v.price,
-        },
-      });
+      };
+      if (localVariant) {
+        await tx.productVariant.update({ where: { id: localVariant.id }, data: { ...variantDetails, shopifyId: v.id } });
+      } else {
+        await tx.productVariant.upsert({
+          where: { storeId_shopifyId: { storeId, shopifyId: v.id } },
+          update: variantDetails,
+          create: {
+            storeId,
+            shopifyId: v.id,
+            ...variantDetails,
+          },
+        });
+      }
     }
 
     return product;

@@ -258,6 +258,8 @@ npm run dev
 | `SHOPIFY_APP_URL` | Public URL Shopify redirects back to after OAuth |
 | `SHOPIFY_WEBHOOK_SECRET` | Optional distinct webhook signing secret; falls back to `SHOPIFY_API_SECRET` |
 | `SHOPIFY_SCOPES` | Comma-separated OAuth scopes requested at install |
+
+Shopify orders show separate payment and shipping statuses. The **إدارة الطلب في Shopify** link opens the order in Shopify to manage preparation and fulfillment there; a shipped order isn't automatically a delivered order. Products created inside the ERP remain local until explicitly published from their detail page. To enable that action, grant `write_products` to the Shopify app, add it to `SHOPIFY_SCOPES` on Vercel, redeploy and reconnect the store to approve the updated OAuth scope. Publishing supports a single local variant, uses a stable Shopify handle so retries do not create duplicate products, and keeps the local recipe linked to the variant. Products published from the ERP require Shopify's usual sales-channel publication settings before they appear on the public storefront.
 | `SHOPIFY_API_VERSION` | Admin API version — verify against shopify.dev before bumping |
 | `SHOPIFY_TOKEN_ENCRYPTION_KEY` | `openssl rand -base64 32` — encrypts the stored access token |
 

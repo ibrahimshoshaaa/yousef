@@ -265,6 +265,34 @@ export class ShopifyClient {
     return data.product;
   }
 
+  /** The deterministic handle makes retrying a timed-out publish safe. */
+  async publishSingleVariantProduct(input: { handle: string; title: string; price: string }): Promise<string> {
+    const data = await this.graphql<{
+      productSet: { product: { id: string } | null; userErrors: { message: string }[] };
+    }>(
+      `mutation PublishErpProduct($input: ProductSetInput!, $identifier: ProductSetIdentifiers) {
+        productSet(input: $input, identifier: $identifier, synchronous: true) {
+          product { id }
+          userErrors { message }
+        }
+      }`,
+      {
+        identifier: { handle: input.handle },
+        input: {
+          title: input.title,
+          handle: input.handle,
+          status: "ACTIVE",
+          productOptions: [{ name: "Title", position: 1, values: [{ name: "Default Title" }] }],
+          variants: [{ price: input.price, optionValues: [{ optionName: "Title", name: "Default Title" }] }],
+        },
+      }
+    );
+    if (data.productSet.userErrors.length || !data.productSet.product) {
+      throw new ShopifyApiError(data.productSet.userErrors.map(error => error.message).join("; ") || "تعذر نشر المنتج في Shopify");
+    }
+    return data.productSet.product.id;
+  }
+
   /** Registers one webhook subscription. Idempotent-ish: Shopify rejects exact duplicates per topic+address, which we treat as success. */
   async registerWebhook(topic: string, callbackUrl: string): Promise<void> {
     const data = await this.graphql<{

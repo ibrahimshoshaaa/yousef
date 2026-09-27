@@ -24,12 +24,13 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
   const page = Math.max(1, Math.min(100000, Number.parseInt(params.page ?? "1", 10) || 1));
   const q = (params.q ?? "").trim().slice(0, 80);
   const where = { storeId: session.storeId, ...(q ? { orderNumber: { contains: q, mode: "insensitive" as const } } : {}) };
-  const [orders, count] = await Promise.all([
+  const [orders, count, connection] = await Promise.all([
     db.order.findMany({
       where, orderBy: { occurredAt: "desc" }, skip: (page - 1) * PAGE_SIZE, take: PAGE_SIZE,
       include: { items: { select: { id: true, title: true, quantity: true, consumptionStatus: true } } },
     }),
     db.order.count({ where }),
+    db.shopifyConnection.findUnique({ where: { storeId: session.storeId }, select: { shopDomain: true } }),
   ]);
   const hasMore = page * PAGE_SIZE < count;
   const pageUrl = (p: number) => `/dashboard/orders?page=${p}${q ? `&q=${encodeURIComponent(q)}` : ""}`;
@@ -51,7 +52,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
           {orders.map(order => (
             <details key={order.id} className="group min-w-0 rounded-2xl border border-slate-200 bg-white shadow-sm">
               <summary className="flex cursor-pointer list-none items-center gap-3 p-4 marker:hidden [&::-webkit-details-marker]:hidden sm:p-5">
-                <div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-x-3 gap-y-1"><h2 className="break-all font-bold">طلب #{order.orderNumber ?? order.id.slice(-8)}</h2><span className={`rounded-full px-2.5 py-1 text-xs ${order.manualStatus === "RETURNED" ? "bg-rose-50 text-rose-800" : "bg-emerald-50 text-emerald-800"}`}>{order.manualStatus ? manualLabels[order.manualStatus] ?? order.manualStatus : financialLabels[order.financialStatus ?? ""] ?? order.financialStatus ?? "الحالة غير محددة"}</span></div><p className="mt-1 text-xs text-slate-500">{order.customerRef ? `${order.customerRef} · ` : ""}{new Intl.DateTimeFormat("ar-EG", { dateStyle: "medium", timeStyle: "short", timeZone: "Africa/Cairo" }).format(order.occurredAt)} · {order.items.length} بند · {Number(order.total ?? 0).toFixed(2)} {order.currency}</p></div>
+                <div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-x-3 gap-y-1"><h2 className="break-all font-bold">طلب #{order.orderNumber ?? order.id.slice(-8)}</h2>{order.manualStatus ? <span className={`rounded-full px-2.5 py-1 text-xs ${order.manualStatus === "RETURNED" ? "bg-rose-50 text-rose-800" : "bg-emerald-50 text-emerald-800"}`}>{manualLabels[order.manualStatus] ?? order.manualStatus}</span> : <><span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs text-emerald-800">الدفع: {financialLabels[order.financialStatus ?? ""] ?? order.financialStatus ?? "غير محدد"}</span><span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs text-amber-900">الشحن: {fulfillmentLabels[order.fulfillmentStatus ?? ""] ?? order.fulfillmentStatus ?? "غير محدد"}</span></>}</div><p className="mt-1 text-xs text-slate-500">{order.customerRef ? `${order.customerRef} · ` : ""}{new Intl.DateTimeFormat("ar-EG", { dateStyle: "medium", timeStyle: "short", timeZone: "Africa/Cairo" }).format(order.occurredAt)} · {order.items.length} بند · {Number(order.total ?? 0).toFixed(2)} {order.currency}</p></div>
                 <span aria-hidden="true" className="shrink-0 text-lg text-slate-500 transition-transform group-open:rotate-180">⌄</span>
               </summary>
               <div className="space-y-3 border-t border-slate-100 px-4 pb-5 pt-4 sm:px-5">
@@ -61,6 +62,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                 <p className="mb-2 text-xs font-semibold text-slate-500">بنود الطلب ({order.items.length})</p>
                 <div className="flex flex-wrap gap-2">{order.items.map(item => <span key={item.id} className="rounded-lg bg-slate-50 px-3 py-1.5 text-xs text-slate-700">{item.title} × {Number(item.quantity)} <span className="text-slate-400">· {item.consumptionStatus}</span></span>)}</div>
                 <Link href={`/dashboard/consumption?orderId=${order.id}`} className="mt-4 inline-block text-sm font-medium text-[#315b4c] hover:underline">عرض الاستهلاك ←</Link>
+                {order.shopifyId && connection?.shopDomain && /^gid:\/\/shopify\/Order\/\d+$/.test(order.shopifyId) && <div className="border-t border-slate-100 pt-4"><p className="mb-2 text-xs text-slate-500">تجهيز وشحن الطلب يُداران من Shopify، وتظهر حالتهما هنا بعد المزامنة. تم الشحن لا يعني تم التسليم للعميل.</p><a href={`https://${connection.shopDomain}/admin/orders/${order.shopifyId.split("/").pop()}`} target="_blank" rel="noopener noreferrer" className="inline-block rounded-xl border border-[#263b35] px-4 py-2.5 text-sm font-semibold text-[#263b35]">إدارة الطلب في Shopify ↗</a></div>}
                 {order.manualStatus && can(session.role, "orders.write") && <ManualOrderActions orderId={order.id} status={order.manualStatus as ManualOrderStatus} canReturn={["returns.write", "expenses.write", "inventory.write"].every(permission => can(session.role, permission))} />}
               </div>
             </details>

@@ -55,8 +55,7 @@ export function NewProductForm() {
           className="w-full rounded-lg border border-[var(--border)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
         />
         <p className="mt-1 text-xs text-gray-400">
-          سيتم ربط المنتج تلقائيًا بـ Shopify عند تفعيل المزامنة. أضف الأحجام
-          (المتغيرات) من صفحة المنتج بعد الحفظ.
+          يُحفظ المنتج في التطبيق أولًا. إذا كان Shopify مربوطًا وبصلاحية كتابة المنتجات، يمكنك نشره من صفحة التفاصيل بعد إضافة الحجم والسعر.
         </p>
       </div>
 
