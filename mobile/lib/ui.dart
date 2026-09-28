@@ -28,6 +28,7 @@ class PageSkeleton extends StatelessWidget {
           child: CircularProgressIndicator(strokeWidth: 2)))),
     ],
   );
+}
 
 Future<void> perform(BuildContext context, Future<dynamic> Function() action,
     {String success = 'تم الحفظ'}) async {
