@@ -68,8 +68,8 @@ class _RecipeLine {
 }
 
 class RecipeForm extends StatefulWidget {
-  const RecipeForm({required this.api, this.recipeId, super.key});
-  final ErpApi api; final String? recipeId;
+  const RecipeForm({required this.api, this.recipeId, this.initialVariantId, super.key});
+  final ErpApi api; final String? recipeId; final String? initialVariantId;
   @override
   State<RecipeForm> createState() => _RecipeFormState();
 }
@@ -81,6 +81,8 @@ class _RecipeFormState extends State<RecipeForm> {
   Future<List<Json>> rowsAsync(String path) async => rows(await widget.api.get(path));
   String? variantId;
   bool busy = false;
+  @override
+  void initState() { super.initState(); variantId = widget.initialVariantId; }
   @override
   void dispose() { name.dispose(); for (final l in lines) { l.dispose(); } super.dispose(); }
   Future<void> submit() async {

@@ -256,7 +256,7 @@ class _DashboardState extends State<_Dashboard> {
         Wrap(spacing: 8, runSpacing: 8, children: [
           if (widget.manager) FilledButton.icon(onPressed: () => openPage(context, NewOrderPage(api: widget.api)),
             icon: const Icon(Icons.add), label: const Text('تسجيل طلب')),
-          if (widget.manager) OutlinedButton(onPressed: () => openPage(context, ProductForm(api: widget.api)),
+          if (widget.manager) OutlinedButton(onPressed: () => openPage(context, SimpleProductPage(api: widget.api)),
             child: const Text('إضافة منتج')),
           if (widget.manager) OutlinedButton(onPressed: () => openPage(context, StockForm(api: widget.api)),
             child: const Text('إضافة مخزون')),

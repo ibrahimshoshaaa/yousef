@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:uuid/uuid.dart';
 
 import 'api.dart';
+import 'recipes.dart';
 import 'ui.dart';
 
 class ProductsPage extends StatelessWidget {
@@ -11,10 +13,16 @@ class ProductsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => DataView(api: api, path: '/api/products',
-    action: canWrite ? (context, reload) => FilledButton.icon(onPressed: () async {
-      final saved = await openPage<bool>(context, ProductForm(api: api));
-      if (saved == true) reload();
-    }, icon: const Icon(Icons.add), label: const Text('إضافة منتج')) : null,
+    action: canWrite ? (context, reload) => Wrap(spacing: 8, children: [
+      FilledButton.icon(onPressed: () async {
+        final saved = await openPage<bool>(context, SimpleProductPage(api: api));
+        if (saved == true) reload();
+      }, icon: const Icon(Icons.add), label: const Text('إضافة منتج بوصفة')),
+      TextButton(onPressed: () async {
+        final saved = await openPage<bool>(context, ProductForm(api: api));
+        if (saved == true) reload();
+      }, child: const Text('منتج متقدم')),
+    ]) : null,
     item: (context, product, reload) => Card(child: ListTile(
       title: Text(str(product['title'])),
       subtitle: Text('${(product['variants'] as List?)?.length ?? 0} أحجام'),
@@ -22,6 +30,86 @@ class ProductsPage extends StatelessWidget {
       onTap: () async { await openPage(context, ProductDetail(api: api,
         product: product, canWrite: canWrite, canShopify: canShopify)); reload(); },
     )));
+}
+
+class _Ingredient {
+  String? materialId;
+  final quantity = TextEditingController();
+  void dispose() => quantity.dispose();
+}
+
+class SimpleProductPage extends StatefulWidget {
+  const SimpleProductPage({required this.api, super.key});
+  final ErpApi api;
+  @override
+  State<SimpleProductPage> createState() => _SimpleProductPageState();
+}
+
+class _SimpleProductPageState extends State<SimpleProductPage> {
+  final name = TextEditingController();
+  final price = TextEditingController();
+  final ingredients = <_Ingredient>[_Ingredient()];
+  final requestId = const Uuid().v4();
+  late Future<List<Json>> materials = loadMaterials();
+  Future<List<Json>> loadMaterials() async => rows(await widget.api.get('/api/materials'));
+  bool busy = false;
+  @override
+  void dispose() {
+    name.dispose(); price.dispose();
+    for (final line in ingredients) { line.dispose(); }
+    super.dispose();
+  }
+
+  Future<void> submit() async {
+    final value = double.tryParse(price.text);
+    if (name.text.trim().isEmpty || value == null || value <= 0 ||
+      ingredients.any((line) => line.materialId == null ||
+        (double.tryParse(line.quantity.text) ?? 0) <= 0) ||
+      ingredients.map((line) => line.materialId).toSet().length != ingredients.length) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('راجع اسم العطر والسعر والخامات والكميات')));
+      return;
+    }
+    setState(() => busy = true);
+    try {
+      await perform(context, () => widget.api.post('/api/products/simple', {
+        'requestId': requestId, 'name': name.text.trim(), 'price': value,
+        'materials': ingredients.map((line) => {
+          'materialId': line.materialId, 'quantity': double.parse(line.quantity.text),
+        }).toList(),
+      }), success: 'تم حفظ العطر ووصفته');
+      if (mounted) Navigator.pop(context, true);
+    } catch (_) { /* Error shown by helper. */ }
+    finally { if (mounted) setState(() => busy = false); }
+  }
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<List<Json>>(future: materials,
+    builder: (context, snapshot) => FormScaffold(title: 'إضافة منتج بوصفة', busy: busy,
+      onSubmit: submit, children: [
+        field('اسم العطر وحجمه', name),
+        field('سعر البيع (EGP)', price, type: TextInputType.number),
+        const Padding(padding: EdgeInsets.symmetric(vertical: 12),
+          child: Text('الخامات المطلوبة للعطر الواحد؛ تُخصم عند البيع')),
+        if (snapshot.hasError) Text('تعذر تحميل الخامات: ${snapshot.error}'),
+        if (snapshot.hasData) ...[
+          if (snapshot.data!.isEmpty) const ListTile(title: Text('أضف خامات للمخزون أولًا')),
+          for (var i = 0; i < ingredients.length; i++) Card(child: Padding(
+            padding: const EdgeInsets.all(12), child: Column(children: [
+              DropdownButtonFormField<String>(value: ingredients[i].materialId,
+                decoration: const InputDecoration(labelText: 'الخامة'),
+                items: snapshot.data!.map((m) => DropdownMenuItem(value: str(m['id']),
+                  child: Text('${m['name']} (${m['unit']})'))).toList(),
+                onChanged: (value) => setState(() => ingredients[i].materialId = value)),
+              field('الكمية', ingredients[i].quantity, type: TextInputType.number),
+              if (ingredients.length > 1) TextButton(onPressed: () => setState(() => ingredients.removeAt(i).dispose()),
+                child: const Text('إزالة الخامة')),
+            ]))),
+          TextButton.icon(onPressed: ingredients.length >= 30 ? null
+            : () => setState(() => ingredients.add(_Ingredient())),
+            icon: const Icon(Icons.add), label: const Text('خامة أخرى')),
+        ],
+      ]));
 }
 
 class ProductForm extends StatefulWidget {
@@ -55,7 +143,8 @@ class _ProductFormState extends State<ProductForm> {
   }
   @override
   Widget build(BuildContext context) => FormScaffold(title: 'إضافة منتج', busy: busy,
-    onSubmit: save, children: [field('اسم المنتج', title), field('الحجم', variant),
+    onSubmit: save, children: [const Text('أضف الوصفة بعد حفظ المنتج ليتم خصم خاماته عند البيع.'),
+      field('اسم المنتج', title), field('الحجم', variant),
       field('SKU', sku), field('السعر (EGP)', price, type: TextInputType.number)]);
 }
 
@@ -85,6 +174,10 @@ class ProductDetail extends StatelessWidget {
           if (v['cost'] != null) ListTile(title: const Text('تكلفة التصنيع'), subtitle: Text('${v['cost']} EGP')),
           if (v['recipes'] is List && (v['recipes'] as List).isNotEmpty)
             const ListTile(title: Text('الوصفة مسجلة'), trailing: Icon(Icons.check_circle_outline)),
+          if (canWrite && (v['recipes'] is! List || (v['recipes'] as List).isEmpty))
+            ListTile(title: const Text('أضف وصفة ليتم خصم الخامات عند البيع'),
+              trailing: const Icon(Icons.chevron_left),
+              onTap: () => openPage(context, RecipeForm(api: api, initialVariantId: str(v['id'])))),
         ],
       )),
       if (canWrite) OutlinedButton.icon(onPressed: () => openPage(context,
