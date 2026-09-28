@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 
 import 'api.dart';
+import 'more.dart';
 import 'ui.dart';
 
 const orderStages = {'NEW': 'قيد التجهيز', 'PREPARED': 'تم التجهيز',
@@ -61,6 +62,10 @@ class _OrdersPageState extends State<OrdersPage> {
           ...((o['items'] as List).map(json)).map((item) => ListTile(
             title: Text(str(item['title'])),
             subtitle: Text('العدد: ${str(item['quantity'])} · ${str(item['consumptionStatus'])}'))),
+          TextButton(onPressed: () => openPage(context, Scaffold(
+            appBar: AppBar(title: Text('استهلاك طلب #${str(o['orderNumber'])}')),
+            body: ConsumptionPage(api: widget.api, orderId: str(o['id'])))),
+            child: const Text('عرض حركة استهلاك الخامات')),
           if (widget.canWrite && o['manualStatus'] != null) ...[
             if (o['manualStatus'] == 'NEW') action(o, 'PREPARED', 'تم التجهيز وخصم الخامات'),
             if (o['manualStatus'] == 'PREPARED') action(o, 'SHIPPING', 'جاري الشحن'),

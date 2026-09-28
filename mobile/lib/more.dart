@@ -76,10 +76,12 @@ class _ReportsPageState extends State<ReportsPage> {
 }
 
 class ConsumptionPage extends StatelessWidget {
-  const ConsumptionPage({required this.api, super.key});
+  const ConsumptionPage({required this.api, this.orderId, super.key});
   final ErpApi api;
+  final String? orderId;
   @override
-  Widget build(BuildContext context) => DataView(api: api, path: '/api/consumption?limit=100',
+  Widget build(BuildContext context) => DataView(api: api,
+    path: '/api/consumption?limit=100${orderId == null ? '' : '&orderId=${Uri.encodeQueryComponent(orderId!)}'}',
     item: (context, entry, reload) => Card(child: ExpansionTile(
       title: Text('طلب #${str((entry['order'] as Map?)?['orderNumber'])}'),
       subtitle: Text('${str(entry['createdAt'])} · ${str(entry['status'])}'),

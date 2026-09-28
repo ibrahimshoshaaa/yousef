@@ -76,10 +76,13 @@ class _MaterialFormState extends State<MaterialForm> {
     try {
       final fields = {'name': name.text.trim(), 'sku': sku.text.trim(),
         'supplierId': supplierId, 'defaultCost': defaultCost,
-        'reorderLevel': reorderLevel, 'capacityMl': capacityMl, 'unit': unit};
+        'reorderLevel': reorderLevel, 'capacityMl': capacityMl,
+        if (widget.material != null) 'materialTypeId': typeId,
+        if (widget.material == null) 'unit': unit,
+        if (widget.material == null) 'baseUnit': unit};
       if (widget.material == null) {
         await perform(context, () => widget.api.post('/api/materials', {
-          ...fields, 'materialTypeId': typeId, 'baseUnit': unit,
+          ...fields, 'materialTypeId': typeId,
         }));
       } else {
         await perform(context, () => widget.api.patch('/api/materials/${widget.material!['id']}', fields));
@@ -102,7 +105,7 @@ class _MaterialFormState extends State<MaterialForm> {
       DropdownButtonFormField<String>(value: unit,
         decoration: const InputDecoration(labelText: 'الوحدة'),
         items: ['مل', 'قطعة'].map((u) => DropdownMenuItem(value: u, child: Text(u))).toList(),
-        onChanged: (value) => setState(() => unit = value!)),
+        onChanged: widget.material == null ? (value) => setState(() => unit = value!) : null),
       FutureBuilder<List<Json>>(future: suppliers, builder: (context, snapshot) => snapshot.hasData
         ? DropdownButtonFormField<String>(value: supplierId,
           decoration: const InputDecoration(labelText: 'المورد (اختياري)'),
