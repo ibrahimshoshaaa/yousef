@@ -243,13 +243,14 @@ class _DashboardState extends State<_Dashboard> {
           'lastMonth': 'الشهر الماضي'}.entries.map((entry) => ChoiceChip(
           label: Text(entry.value), selected: period == entry.key,
           onSelected: (_) => choose(entry.key))).toList()),
-        for (final metric in <(String, dynamic)>[
-          ('إجمالي المبيعات', sales['gross']), ('صافي المبيعات', sales['net']),
-          ('الدفعات المستلمة', cash['received']), ('الطلبات', sales['orders']),
-          ('الوحدات المباعة', sales['units']), ('المرتجعات', returns['count']),
-          ('تكلفة المرتجعات', returns['costs']), ('المصروفات', expenses['total']),
+        for (final metric in <(String, dynamic, bool)>[
+          ('إجمالي المبيعات', sales['gross'], true), ('صافي المبيعات', sales['net'], true),
+          ('الدفعات المستلمة', cash['received'], true), ('الطلبات', sales['orders'], false),
+          ('الوحدات المباعة', sales['units'], false), ('المرتجعات', returns['count'], false),
+          ('تكلفة المرتجعات', returns['costs'], true), ('المصروفات', expenses['total'], true),
         ]) Card(child: ListTile(title: Text(metric.$1),
-          trailing: Text(str(metric.$2), style: Theme.of(context).textTheme.titleMedium))),
+          trailing: Text('${str(metric.$2)}${metric.$3 ? ' ${str(data['currency'])}' : ''}',
+            style: Theme.of(context).textTheme.titleMedium))),
         Text('وصول سريع', style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 8),
         Wrap(spacing: 8, runSpacing: 8, children: [

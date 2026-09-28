@@ -17,7 +17,11 @@ class MaterialsPage extends StatelessWidget {
     item: (context, m, reload) => Card(child: ListTile(
       title: Text(str(m['name'])),
       subtitle: Text('${str((m['materialType'] as Map?)?['name'])} · ${str((m['balance'] as Map?)?['quantity'])} ${str(m['unit'])}'),
-      trailing: const Icon(Icons.chevron_left), onTap: () async {
+      trailing: canWrite ? IconButton(icon: const Icon(Icons.edit_outlined),
+        tooltip: 'تعديل الخامة', onPressed: () async {
+          final saved = await openPage<bool>(context, MaterialForm(api: api, material: m));
+          if (saved == true) reload();
+        }) : const Icon(Icons.chevron_left), onTap: () async {
         await openPage(context, MaterialDetail(api: api, material: m, canWrite: canWrite));
         reload();
       },
@@ -62,7 +66,10 @@ class _MaterialFormState extends State<MaterialForm> {
     final defaultCost = cost.text.isEmpty ? null : double.tryParse(cost.text);
     final reorderLevel = reorder.text.isEmpty ? null : double.tryParse(reorder.text);
     final capacityMl = capacity.text.isEmpty ? null : double.tryParse(capacity.text);
-    if ((defaultCost != null && defaultCost < 0) ||
+    if ((cost.text.isNotEmpty && defaultCost == null) ||
+      (reorder.text.isNotEmpty && reorderLevel == null) ||
+      (capacity.text.isNotEmpty && capacityMl == null) ||
+      (defaultCost != null && defaultCost < 0) ||
       (reorderLevel != null && reorderLevel < 0) ||
       (capacityMl != null && capacityMl < 0)) return;
     setState(() => busy = true);

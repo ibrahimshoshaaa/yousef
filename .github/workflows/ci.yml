@@ -56,3 +56,5 @@ jobs:
         run: npm run lint
       - name: Build application
         run: npm run build
+      - name: Verify mobile authentication over HTTP
+        run: node --test tests/mobile-api.integration.mjs
