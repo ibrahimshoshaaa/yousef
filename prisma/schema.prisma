@@ -37,6 +37,7 @@ model Store {
   updatedAt                  DateTime            @updatedAt
 
   users                      User[]
+  mobileSessions             MobileSession[]
   settings                   Setting[]
   auditLogs                  AuditLog[]
   shopifyConnection          ShopifyConnection?
@@ -73,7 +74,24 @@ model User {
 
   store        Store      @relation(fields: [storeId], references: [id], onDelete: Cascade)
   auditLogs    AuditLog[]
+  mobileSessions MobileSession[]
 
+  @@index([storeId])
+}
+
+model MobileSession {
+  id        String    @id @default(cuid())
+  userId    String
+  storeId   String
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
   @@index([storeId])
 }
 

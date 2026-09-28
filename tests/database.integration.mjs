@@ -30,4 +30,21 @@ test('store isolation, unique Shopify IDs and transaction rollback in PostgreSQL
   }
 });
 
+test('mobile sessions can be revoked and removed with their store', async () => {
+  const store = await db.store.create({ data: { name: 'CI Mobile' } });
+  try {
+    const user = await db.user.create({ data: { storeId: store.id,
+      email: `ci-mobile-${store.id}@example.com`, status: 'ACTIVE' } });
+    const tokenHash = `ci-${store.id}`;
+    await db.mobileSession.create({ data: { storeId: store.id, userId: user.id,
+      tokenHash, expiresAt: new Date(Date.now() + 60_000) } });
+    assert.equal((await db.mobileSession.findUnique({ where: { tokenHash } })).revokedAt, null);
+    await db.mobileSession.update({ where: { tokenHash }, data: { revokedAt: new Date() } });
+    assert.notEqual((await db.mobileSession.findUnique({ where: { tokenHash } })).revokedAt, null);
+  } finally {
+    await db.store.delete({ where: { id: store.id } });
+  }
+  assert.equal(await db.mobileSession.count({ where: { storeId: store.id } }), 0);
+});
+
 test.after(async () => { await db.$disconnect(); });
