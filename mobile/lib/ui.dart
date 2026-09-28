@@ -10,6 +10,26 @@ List<Json> rows(dynamic response) =>
 String str(dynamic value) => value?.toString() ?? '';
 double amount(dynamic value) => double.tryParse(str(value)) ?? 0;
 
+class PageSkeleton extends StatelessWidget {
+  const PageSkeleton({super.key});
+  @override
+  Widget build(BuildContext context) => ListView(
+    padding: const EdgeInsets.all(16),
+    children: [
+      Container(height: 20, width: 160, margin: const EdgeInsets.only(bottom: 18),
+        alignment: Alignment.centerRight,
+        child: Container(width: 160, color: const Color(0xffe4eae6))),
+      for (final height in const [150.0, 96.0, 96.0, 96.0])
+        Container(height: height, margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(color: const Color(0xffe8eeea),
+            borderRadius: BorderRadius.circular(20))),
+      const Center(child: Padding(padding: EdgeInsets.all(8),
+        child: SizedBox(width: 18, height: 18,
+          child: CircularProgressIndicator(strokeWidth: 2)))),
+    ],
+  );
+}
+
 Future<void> perform(BuildContext context, Future<dynamic> Function() action,
     {String success = 'تم الحفظ'}) async {
   try {
@@ -62,7 +82,7 @@ class _DataViewState extends State<DataView> {
     future: future,
     builder: (context, snapshot) {
       if (!snapshot.hasData && !snapshot.hasError) {
-        return const Center(child: CircularProgressIndicator());
+        return const PageSkeleton();
       }
       if (snapshot.hasError) {
         return Center(child: TextButton.icon(onPressed: reload,
@@ -70,7 +90,7 @@ class _DataViewState extends State<DataView> {
       }
       final entries = snapshot.data!;
       return RefreshIndicator(onRefresh: () async { reload(); await future; },
-        child: ListView(padding: const EdgeInsets.all(12), children: [
+        child: ListView(padding: const EdgeInsets.all(16), children: [
           if (widget.action != null) widget.action!(context, reload),
           if (entries.isEmpty) const Padding(padding: EdgeInsets.all(28),
             child: Center(child: Text('لا توجد بيانات بعد'))),

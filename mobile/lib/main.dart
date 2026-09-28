@@ -39,8 +39,46 @@ class _PerfumeErpAppState extends State<PerfumeErpApp> {
         title: 'Perfume ERP',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xff253d36)),
-          scaffoldBackgroundColor: const Color(0xfff5f6f8),
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: const Color(0xff173d34),
+            primary: const Color(0xff173d34),
+            surface: Colors.white,
+          ),
+          scaffoldBackgroundColor: const Color(0xfff5f6f4),
+          appBarTheme: const AppBarTheme(
+            backgroundColor: Color(0xfff5f6f4),
+            foregroundColor: Color(0xff142720),
+            elevation: 0,
+            scrolledUnderElevation: 0,
+            centerTitle: false,
+          ),
+          cardTheme: CardThemeData(
+            color: Colors.white,
+            elevation: 0,
+            margin: EdgeInsets.zero,
+            shape: RoundedRectangleBorder(
+              side: const BorderSide(color: Color(0xffe5eae6)),
+              borderRadius: BorderRadius.circular(20),
+            ),
+          ),
+          filledButtonTheme: FilledButtonThemeData(style: FilledButton.styleFrom(
+            minimumSize: const Size(0, 48),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          )),
+          outlinedButtonTheme: OutlinedButtonThemeData(style: OutlinedButton.styleFrom(
+            minimumSize: const Size(0, 48),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          )),
+          inputDecorationTheme: InputDecorationTheme(
+            filled: true,
+            fillColor: Colors.white,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(color: Color(0xffdce4de)),
+            ),
+          ),
           useMaterial3: true,
         ),
         builder: (context, child) => Directionality(
@@ -140,7 +178,9 @@ class _ErpHomeState extends State<ErpHome> {
   final scaffoldKey = GlobalKey<ScaffoldState>();
   late Future<dynamic> account = widget.api.get('/api/mobile/me');
 
-  void switchTo(int index) => setState(() => selected = index);
+  void switchTo(int index) {
+    if (selected != index) setState(() => selected = index);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -183,19 +223,44 @@ class _ErpHomeState extends State<ErpHome> {
       };
       return Scaffold(
         key: scaffoldKey,
-        appBar: AppBar(title: Text(titles[selected]), actions: [
-          IconButton(icon: const Icon(Icons.logout), tooltip: 'تسجيل الخروج',
-            onPressed: () async { try { await widget.api.logout(); }
-              finally { widget.onLogout(); } }),
-        ]),
-        drawer: Drawer(child: SafeArea(child: ListView(children: [
-          const DrawerHeader(child: Center(child: Text('Perfume ERP'))),
-          for (final i in visible) ListTile(leading: Icon(icons[i]),
-            title: Text(titles[i]), selected: selected == i,
-            onTap: () { Navigator.pop(context); switchTo(i); }),
+        appBar: AppBar(
+          title: Text(titles[selected], style: const TextStyle(fontWeight: FontWeight.w700)),
+        ),
+        drawer: Drawer(child: SafeArea(child: Column(children: [
+          Padding(padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
+            child: Row(children: [
+              const CircleAvatar(radius: 22, backgroundColor: Color(0xff173d34),
+                child: Icon(Icons.spa_outlined, color: Colors.white)),
+              const SizedBox(width: 12),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+                children: [Text(str(user['store'] is Map ? user['store']['name'] : 'Perfume ERP'),
+                  maxLines: 1, overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+                  Text(str(user['email']), maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 12, color: Color(0xff718079)))])),
+            ])),
+          const Divider(height: 1),
+          Expanded(child: ListView(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            children: [for (final i in visible) Padding(
+              padding: const EdgeInsets.only(bottom: 3),
+              child: ListTile(leading: Icon(icons[i], size: 22),
+                title: Text(titles[i]), selected: selected == i,
+                selectedTileColor: const Color(0xffe5f0ea),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                onTap: () { Navigator.pop(context); switchTo(i); }),
+            )])),
+          const Divider(height: 1),
+          Padding(padding: const EdgeInsets.all(12), child: ListTile(
+            leading: const Icon(Icons.logout_rounded), title: const Text('تسجيل الخروج'),
+            onTap: () async { try { await widget.api.logout(); }
+              finally { widget.onLogout(); } },
+          )),
         ]))),
         body: KeyedSubtree(key: ValueKey(selected), child: body),
         bottomNavigationBar: NavigationBar(
+          height: 72,
+          backgroundColor: Colors.white,
+          indicatorColor: const Color(0xffe2efe8),
           selectedIndex: selected < 3 ? selected : 3,
           onDestinationSelected: (index) => index == 3
             ? scaffoldKey.currentState?.openDrawer() : switchTo(index),
@@ -221,51 +286,153 @@ class _Dashboard extends StatefulWidget {
 
 class _DashboardState extends State<_Dashboard> {
   String period = '7d';
+  Json? cached;
   late Future<dynamic> report = load();
   Future<dynamic> load() => widget.api.get('/api/mobile/home?period=$period');
   void choose(String value) => setState(() { period = value; report = load(); });
+  static const labels = {'today': 'اليوم', 'yesterday': 'أمس',
+    '7d': 'آخر ٧ أيام', '30d': 'آخر ٣٠ يوم', 'month': 'هذا الشهر',
+    'lastMonth': 'الشهر الماضي'};
+
+  Widget metric(String label, dynamic value, IconData icon, String currency,
+      {bool money = false}) => Card(child: Padding(
+    padding: const EdgeInsets.all(16),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Icon(icon, color: const Color(0xff9a793f), size: 22),
+      const SizedBox(height: 18),
+      Text(money ? '${str(value)} $currency' : str(value), maxLines: 1,
+        overflow: TextOverflow.ellipsis, textDirection: TextDirection.ltr,
+        style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800,
+          color: Color(0xff142720))),
+      const SizedBox(height: 5),
+      Text(label, style: const TextStyle(fontSize: 13, color: Color(0xff66766e))),
+    ]),
+  ));
+
+  Widget shortcut(String title, IconData icon, VoidCallback onTap) =>
+    InkWell(onTap: onTap, borderRadius: BorderRadius.circular(16),
+      child: Container(padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 13),
+        decoration: BoxDecoration(color: Colors.white,
+          border: Border.all(color: const Color(0xffe5eae6)),
+          borderRadius: BorderRadius.circular(16)),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Icon(icon, size: 23, color: const Color(0xff173d34)),
+          const SizedBox(height: 8),
+          Text(title, maxLines: 1, overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+        ])));
+
   @override
   Widget build(BuildContext context) => FutureBuilder<dynamic>(
     future: report, builder: (context, snapshot) {
-      if (!snapshot.hasData) return Center(child: snapshot.hasError
-        ? Text('تعذر تحميل لوحة التحكم: ${snapshot.error}')
-        : const CircularProgressIndicator());
-      final data = json(snapshot.data['data']);
+      if (snapshot.hasData) cached = json(snapshot.data['data']);
+      if (cached == null) return snapshot.hasError
+        ? Center(child: TextButton.icon(onPressed: () => setState(() => report = load()),
+            icon: const Icon(Icons.refresh), label: const Text('تعذر التحميل · إعادة المحاولة')))
+        : const PageSkeleton();
+      final data = cached!;
       final sales = json(data['sales']);
       final cash = json(data['cash']);
       final returns = json(data['returns']);
       final expenses = json(data['expenses']);
-      return ListView(padding: const EdgeInsets.all(16), children: [
-        Card(child: ListTile(title: Text('أهلًا ${str(widget.user['name']).isEmpty ? widget.user['email'] : widget.user['name']}'),
-          subtitle: Text(str((widget.user['store'] as Map?)?['name'])))),
-        Wrap(spacing: 8, children: const {'today': 'اليوم', 'yesterday': 'أمس',
-          '7d': 'آخر ٧ أيام', '30d': 'آخر ٣٠ يوم', 'month': 'هذا الشهر',
-          'lastMonth': 'الشهر الماضي'}.entries.map((entry) => ChoiceChip(
-          label: Text(entry.value), selected: period == entry.key,
-          onSelected: (_) => choose(entry.key))).toList()),
-        for (final metric in <(String, dynamic, bool)>[
-          ('إجمالي المبيعات', sales['gross'], true), ('صافي المبيعات', sales['net'], true),
-          ('الدفعات المستلمة', cash['received'], true), ('الطلبات', sales['orders'], false),
-          ('الوحدات المباعة', sales['units'], false), ('المرتجعات', returns['count'], false),
-          ('تكلفة المرتجعات', returns['costs'], true), ('المصروفات', expenses['total'], true),
-        ]) Card(child: ListTile(title: Text(metric.$1),
-          trailing: Text('${str(metric.$2)}${metric.$3 ? ' ${str(data['currency'])}' : ''}',
-            style: Theme.of(context).textTheme.titleMedium))),
-        Text('وصول سريع', style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: 8),
-        Wrap(spacing: 8, runSpacing: 8, children: [
-          if (widget.manager) FilledButton.icon(onPressed: () => openPage(context, NewOrderPage(api: widget.api)),
-            icon: const Icon(Icons.add), label: const Text('تسجيل طلب')),
-          if (widget.manager) OutlinedButton(onPressed: () => openPage(context, SimpleProductPage(api: widget.api)),
-            child: const Text('إضافة منتج')),
-          if (widget.manager) OutlinedButton(onPressed: () => openPage(context, StockForm(api: widget.api)),
-            child: const Text('إضافة مخزون')),
-          if (widget.manager) OutlinedButton(onPressed: () => openPage(context, ExpenseForm(api: widget.api)),
-            child: const Text('إضافة مصروف')),
-          OutlinedButton(onPressed: () => widget.onSelect(1), child: const Text('الطلبات')),
-          OutlinedButton(onPressed: () => widget.onSelect(2), child: const Text('المخزون')),
-          if (widget.manager) OutlinedButton(onPressed: () => widget.onSelect(5), child: const Text('المرتجعات')),
+      final currency = str(data['currency']);
+      final name = str(widget.user['name']).trim();
+      final quick = <(String, IconData, VoidCallback)>[
+        if (widget.manager) ('طلب جديد', Icons.add_shopping_cart_outlined,
+          () => openPage(context, NewOrderPage(api: widget.api))),
+        if (widget.manager) ('منتج جديد', Icons.add_box_outlined,
+          () => openPage(context, SimpleProductPage(api: widget.api))),
+        if (widget.manager) ('إضافة مخزون', Icons.add_home_work_outlined,
+          () => openPage(context, StockForm(api: widget.api))),
+        if (widget.manager) ('إضافة مصروف', Icons.add_card_outlined,
+          () => openPage(context, ExpenseForm(api: widget.api))),
+        ('الطلبات', Icons.receipt_long_outlined, () => widget.onSelect(1)),
+        ('المخزون', Icons.warehouse_outlined, () => widget.onSelect(2)),
+        if (widget.manager) ('المرتجعات', Icons.assignment_return_outlined,
+          () => widget.onSelect(5)),
+      ];
+      final metrics = <(String, dynamic, IconData, bool)>[
+        ('صافي المبيعات', sales['net'], Icons.show_chart, true),
+        ('الدفعات المستلمة', cash['received'], Icons.payments_outlined, true),
+        ('الطلبات', sales['orders'], Icons.receipt_long_outlined, false),
+        ('الوحدات المباعة', sales['units'], Icons.inventory_2_outlined, false),
+        ('المصروفات', expenses['total'], Icons.account_balance_wallet_outlined, true),
+        ('المرتجعات', returns['count'], Icons.assignment_return_outlined, false),
+      ];
+      return RefreshIndicator(onRefresh: () async {
+        final next = load(); setState(() => report = next); await next;
+      }, child: ListView(padding: const EdgeInsets.fromLTRB(16, 12, 16, 24), children: [
+        if (snapshot.connectionState == ConnectionState.waiting)
+          const LinearProgressIndicator(minHeight: 2),
+        if (snapshot.hasError) Padding(padding: const EdgeInsets.only(bottom: 8),
+          child: TextButton.icon(onPressed: () => setState(() => report = load()),
+            icon: const Icon(Icons.refresh), label: const Text('تعذر تحديث الفترة · إعادة المحاولة'))),
+        Text('أهلًا، ${name.isEmpty ? 'بك' : name.split(' ').first} 👋',
+          style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w800,
+            color: Color(0xff142720))),
+        const SizedBox(height: 4),
+        Text(str((widget.user['store'] as Map?)?['name']),
+          style: const TextStyle(color: Color(0xff718079))),
+        const SizedBox(height: 20),
+        Row(children: [
+          for (final key in const ['today', 'yesterday', '7d'])
+            Expanded(child: Padding(padding: const EdgeInsetsDirectional.only(end: 6),
+              child: ChoiceChip(label: Text(labels[key]!, maxLines: 1,
+                style: const TextStyle(fontSize: 12)),
+                selected: period == key,
+                onSelected: (_) => choose(key)))),
+          PopupMenuButton<String>(tooltip: 'فترات أخرى',
+            onSelected: choose,
+            itemBuilder: (_) => [for (final key in const ['30d', 'month', 'lastMonth'])
+              PopupMenuItem(value: key, child: Text(labels[key]!))],
+            child: Container(padding: const EdgeInsets.all(11),
+              decoration: BoxDecoration(
+                color: !const ['today', 'yesterday', '7d'].contains(period)
+                  ? const Color(0xffe2efe8) : Colors.white,
+                border: Border.all(color: const Color(0xffdce4de)),
+                borderRadius: BorderRadius.circular(12)),
+              child: const Icon(Icons.tune, size: 20))),
         ]),
-      ]);
+        if (!const ['today', 'yesterday', '7d'].contains(period))
+          Padding(padding: const EdgeInsets.only(top: 8), child: Text(labels[period]!,
+            style: const TextStyle(color: Color(0xff173d34), fontWeight: FontWeight.w600))),
+        const SizedBox(height: 18),
+        Container(padding: const EdgeInsets.all(22),
+          decoration: BoxDecoration(color: const Color(0xff173d34),
+            borderRadius: BorderRadius.circular(24)),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Row(children: [Icon(Icons.trending_up, color: Color(0xffd8c59a)),
+              SizedBox(width: 8), Text('إجمالي المبيعات',
+                style: TextStyle(color: Color(0xffe0eae2), fontSize: 14))]),
+            const SizedBox(height: 15),
+            Text('${str(sales['gross'])} $currency', textDirection: TextDirection.ltr,
+              style: const TextStyle(color: Colors.white, fontSize: 30,
+                fontWeight: FontWeight.w800)),
+            const SizedBox(height: 8),
+            Text(labels[period]!, style: const TextStyle(color: Color(0xffc9d9ce))),
+          ])),
+        const SizedBox(height: 22),
+        const Text('ملخص النشاط', style: TextStyle(fontSize: 18,
+          fontWeight: FontWeight.w800, color: Color(0xff142720))),
+        const SizedBox(height: 12),
+        LayoutBuilder(builder: (context, constraints) {
+          final width = (constraints.maxWidth - 10) / 2;
+          return Wrap(spacing: 10, runSpacing: 10, children: [
+            for (final m in metrics) SizedBox(width: width,
+              child: metric(m.$1, m.$2, m.$3, currency, money: m.$4)),
+          ]);
+        }),
+        const SizedBox(height: 24),
+        const Text('وصول سريع', style: TextStyle(fontSize: 18,
+          fontWeight: FontWeight.w800, color: Color(0xff142720))),
+        const SizedBox(height: 12),
+        LayoutBuilder(builder: (context, constraints) {
+          final width = (constraints.maxWidth - 16) / 3;
+          return Wrap(spacing: 8, runSpacing: 8, children: [
+            for (final q in quick) SizedBox(width: width,
+              child: shortcut(q.$1, q.$2, q.$3)),
+          ]);
+        }),
+      ]));
     });
 }

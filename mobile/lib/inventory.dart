@@ -4,27 +4,96 @@ import 'package:uuid/uuid.dart';
 import 'api.dart';
 import 'ui.dart';
 
-class InventoryPage extends StatelessWidget {
+class InventoryPage extends StatefulWidget {
   const InventoryPage({required this.api, required this.canWrite, super.key});
   final ErpApi api;
   final bool canWrite;
   @override
-  Widget build(BuildContext context) => DataView(api: api, path: '/api/materials',
-    action: canWrite ? (context, reload) => Padding(padding: const EdgeInsets.all(8),
-      child: FilledButton.icon(onPressed: () async {
-        final saved = await openPage<bool>(context, StockForm(api: api));
-        if (saved == true) reload();
-      },
-        icon: const Icon(Icons.add), label: const Text('إضافة مخزون'))) : null,
-    item: (context, material, reload) => Card(child: ListTile(
-      title: Text(str(material['name'])),
-      subtitle: Text('${str(json(material['materialType'])['name'])} · الرصيد ${str((material['balance'] as Map?)?['quantity'])} ${str(material['unit'])}'),
-      trailing: const Icon(Icons.chevron_left),
-      onTap: () async {
-        await openPage(context, MaterialDetail(api: api, material: material, canWrite: canWrite));
-        reload();
-      },
-    )));
+  State<InventoryPage> createState() => _InventoryPageState();
+}
+
+class _InventoryPageState extends State<InventoryPage> {
+  final search = TextEditingController();
+  late Future<List<Json>> future = load();
+  Future<List<Json>> load() async => rows(await widget.api.get('/api/materials'));
+  void reload() => setState(() => future = load());
+
+  @override
+  void dispose() { search.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<List<Json>>(future: future,
+    builder: (context, snapshot) {
+      if (!snapshot.hasData) return snapshot.hasError
+        ? Center(child: TextButton.icon(onPressed: reload,
+            icon: const Icon(Icons.refresh), label: const Text('إعادة تحميل المخزون')))
+        : const PageSkeleton();
+      final all = snapshot.data!;
+      final filtered = all.where((m) => str(m['name']).toLowerCase()
+        .contains(search.text.trim().toLowerCase())).toList();
+      final groups = <String, List<Json>>{};
+      for (final material in filtered) {
+        final type = material['materialType'] is Map
+          ? str(json(material['materialType'])['name']) : 'خامـات أخرى';
+        groups.putIfAbsent(type, () => []).add(material);
+      }
+      return RefreshIndicator(onRefresh: () async { reload(); await future; },
+        child: ListView(padding: const EdgeInsets.fromLTRB(16, 16, 16, 24), children: [
+          Row(children: [
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+              children: [const Text('المخزون', style: TextStyle(fontSize: 22,
+                fontWeight: FontWeight.w800)),
+                Text('${all.length} خامة مسجلة',
+                  style: const TextStyle(color: Color(0xff718079), fontSize: 13))])),
+            if (widget.canWrite) FilledButton.icon(onPressed: () async {
+              final saved = await openPage<bool>(context, StockForm(api: widget.api));
+              if (saved == true) reload();
+            }, icon: const Icon(Icons.add, size: 19), label: const Text('إضافة')),
+          ]),
+          const SizedBox(height: 18),
+          TextField(controller: search, onChanged: (_) => setState(() {}),
+            decoration: const InputDecoration(hintText: 'ابحث عن خامة',
+              prefixIcon: Icon(Icons.search))),
+          const SizedBox(height: 18),
+          if (groups.isEmpty) const Padding(padding: EdgeInsets.all(32),
+            child: Center(child: Text('لا توجد خامات مطابقة'))),
+          for (final group in groups.entries) Padding(
+            padding: const EdgeInsets.only(bottom: 14),
+            child: Card(child: Column(children: [
+              Padding(padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+                child: Row(children: [
+                  Expanded(child: Text(group.key, style: const TextStyle(
+                    fontSize: 17, fontWeight: FontWeight.w800))),
+                  Text('${group.value.length} خامة', style: const TextStyle(
+                    color: Color(0xff718079), fontSize: 12)),
+                ])),
+              const Divider(height: 1),
+              for (var i = 0; i < group.value.length; i++) ...[
+                if (i > 0) const Divider(height: 1, indent: 16, endIndent: 16),
+                ListTile(contentPadding: const EdgeInsets.symmetric(horizontal: 16,
+                  vertical: 4),
+                  title: Text(str(group.value[i]['name']),
+                    style: const TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: const Text('عرض التفاصيل وحركة المخزون',
+                    style: TextStyle(fontSize: 11)),
+                  trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                    Text('${str((group.value[i]['balance'] as Map?)?['quantity'])} '
+                      '${str(group.value[i]['unit'])}',
+                      style: const TextStyle(color: Color(0xff173d34),
+                        fontWeight: FontWeight.w800, fontSize: 13)),
+                    const SizedBox(width: 4),
+                    const Icon(Icons.chevron_left, size: 20),
+                  ]),
+                  onTap: () async {
+                    await openPage(context, MaterialDetail(api: widget.api,
+                      material: group.value[i], canWrite: widget.canWrite));
+                    reload();
+                  }),
+              ],
+            ])),
+          ),
+        ]));
+    });
 }
 
 class StockForm extends StatefulWidget {
