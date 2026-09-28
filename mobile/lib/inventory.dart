@@ -10,8 +10,11 @@ class InventoryPage extends StatelessWidget {
   final bool canWrite;
   @override
   Widget build(BuildContext context) => DataView(api: api, path: '/api/materials',
-    action: canWrite ? Padding(padding: const EdgeInsets.all(8),
-      child: FilledButton.icon(onPressed: () => openPage(context, StockForm(api: api)),
+    action: canWrite ? (context, reload) => Padding(padding: const EdgeInsets.all(8),
+      child: FilledButton.icon(onPressed: () async {
+        final saved = await openPage<bool>(context, StockForm(api: api));
+        if (saved == true) reload();
+      },
         icon: const Icon(Icons.add), label: const Text('إضافة مخزون'))) : null,
     item: (context, material, reload) => Card(child: ListTile(
       title: Text(str(material['name'])),

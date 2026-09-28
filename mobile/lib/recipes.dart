@@ -9,8 +9,10 @@ class RecipesPage extends StatelessWidget {
   final bool canWrite;
   @override
   Widget build(BuildContext context) => DataView(api: api, path: '/api/recipes',
-    action: canWrite ? FilledButton.icon(onPressed: () => openPage(context,
-      RecipeForm(api: api)), icon: const Icon(Icons.add), label: const Text('إضافة وصفة')) : null,
+    action: canWrite ? (context, reload) => FilledButton.icon(onPressed: () async {
+      final saved = await openPage<bool>(context, RecipeForm(api: api));
+      if (saved == true) reload();
+    }, icon: const Icon(Icons.add), label: const Text('إضافة وصفة')) : null,
     item: (context, recipe, reload) => Card(child: ListTile(
       title: Text(str(recipe['name'])),
       subtitle: Text('المنتج: ${str((recipe['variant'] as Map?)?['title'])}'),

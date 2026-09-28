@@ -12,9 +12,22 @@ class ReportsPage extends StatefulWidget {
 }
 class _ReportsPageState extends State<ReportsPage> {
   String period = '7d';
+  DateTime? from;
+  DateTime? to;
   late Future<dynamic> report = load();
-  Future<dynamic> load() => widget.api.get('/api/reports?period=$period');
+  String date(DateTime value) => '${value.year}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}';
+  Future<dynamic> load() => widget.api.get(period == 'custom' && from != null && to != null
+    ? '/api/reports?period=custom&from=${date(from!)}&to=${date(to!)}'
+    : '/api/reports?period=$period');
   void choose(String value) => setState(() { period = value; report = load(); });
+  Future<void> custom() async {
+    final picked = await showDateRangePicker(context: context,
+      firstDate: DateTime(2020), lastDate: DateTime.now(),
+      initialDateRange: from != null && to != null ? DateTimeRange(start: from!, end: to!) : null);
+    if (picked != null) setState(() {
+      from = picked.start; to = picked.end; period = 'custom'; report = load();
+    });
+  }
   @override
   Widget build(BuildContext context) => ListView(padding: const EdgeInsets.all(16), children: [
     Wrap(spacing: 8, children: const {'today': 'اليوم', 'yesterday': 'أمس',
@@ -22,20 +35,42 @@ class _ReportsPageState extends State<ReportsPage> {
       'month': 'هذا الشهر', 'lastMonth': 'الشهر الماضي'}.entries.map((entry) =>
       ChoiceChip(label: Text(entry.value), selected: period == entry.key,
         onSelected: (_) => choose(entry.key))).toList()),
+    OutlinedButton.icon(onPressed: custom, icon: const Icon(Icons.date_range),
+      label: Text(period == 'custom' && from != null && to != null
+        ? '${date(from!)} – ${date(to!)}' : 'فترة مخصصة')),
     FutureBuilder<dynamic>(future: report, builder: (context, snapshot) {
       if (!snapshot.hasData) return Center(child: snapshot.hasError
         ? TextButton(onPressed: () => choose(period), child: Text('${snapshot.error} · إعادة المحاولة'))
         : const CircularProgressIndicator());
       final data = json(snapshot.data['data']);
-      return Column(children: data.entries.map((entry) => Card(child: ExpansionTile(
-        title: Text(entry.key),
-        subtitle: entry.value is num || entry.value is String
-          ? Text(str(entry.value)) : null,
-        children: [if (entry.value is Map) ...json(entry.value).entries.map((item) =>
-          ListTile(title: Text(item.key), subtitle: Text(str(item.value))))
-          else if (entry.value is List) ...((entry.value as List).take(50)).map((item) =>
-          ListTile(title: Text(str(item))))],
-      ))).toList());
+      final sales = json(data['sales']);
+      final cash = json(data['cash']);
+      final returns = json(data['returns']);
+      final expenses = json(data['expenses']);
+      Widget section(String title, List<Widget> children) => Card(child: ExpansionTile(
+        title: Text(title), initiallyExpanded: title == 'المبيعات', children: children));
+      Widget line(String title, dynamic value) => ListTile(title: Text(title), trailing: Text(str(value)));
+      return Column(children: [
+        section('المبيعات', [
+          line('إجمالي المبيعات', sales['gross']), line('صافي المبيعات', sales['net']),
+          line('الطلبات', sales['orders']), line('الوحدات المباعة', sales['units']),
+          line('متوسط الطلب', sales['averageOrderValue']),
+          line('الخصومات', sales['discounts']), line('المسترد', sales['refunded']),
+          line('الدفعات المستلمة', cash['received']), line('الديبوزت', cash['deposits']),
+        ]),
+        section('المنتجات', [for (final product in (data['products'] as List).map(json))
+          ListTile(title: Text('${product['product']} · ${product['variant']}'),
+            subtitle: Text('الوحدات: ${product['units']}'), trailing: Text(str(product['net'])))]),
+        section('المرتجعات', [line('عدد المرتجعات', returns['count']),
+          line('قيمتها', returns['value']), line('تكلفتها', returns['costs'])]),
+        section('المصروفات', [line('إجمالي المصروفات', expenses['total']),
+          for (final category in (expenses['byCategory'] as List).map(json))
+            line(str(category['category'] ?? category['name']), category['amount'])]),
+        section('استهلاك الخامات', [for (final material in (data['consumption'] as List).map(json))
+          line(str(material['name']), '${material['consumed']} ${material['unit']}')]),
+        section('المخزون الحالي', [for (final material in (data['inventory'] as List).map(json))
+          line(str(material['name']), '${material['stock']} ${material['unit']}')]),
+      ]);
     }),
   ]);
 }

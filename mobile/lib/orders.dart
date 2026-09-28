@@ -6,6 +6,10 @@ import 'ui.dart';
 
 const orderStages = {'NEW': 'قيد التجهيز', 'PREPARED': 'تم التجهيز',
   'SHIPPING': 'جاري الشحن', 'DELIVERED': 'تم التسليم', 'RETURNED': 'تم الإرجاع'};
+const paymentStages = {'PAID': 'مدفوع', 'PARTIALLY_PAID': 'مدفوع جزئيًا',
+  'PENDING': 'غير مدفوع', 'REFUNDED': 'مسترد', 'PARTIALLY_REFUNDED': 'مسترد جزئيًا'};
+const fulfillmentStages = {'UNFULFILLED': 'لم يُشحن', 'FULFILLED': 'تم الشحن',
+  'PARTIALLY_FULFILLED': 'شُحن جزء منه', 'IN_PROGRESS': 'جاري التجهيز'};
 
 class OrdersPage extends StatefulWidget {
   const OrdersPage({required this.api, required this.canWrite, super.key});
@@ -48,8 +52,10 @@ class _OrdersPageState extends State<OrdersPage> {
       final orders = (data['data'] as List).map(json);
       body.addAll(orders.map((o) => Card(child: ExpansionTile(
         title: Text('طلب #${str(o['orderNumber'])}'),
-        subtitle: Text('${orderStages[str(o['manualStatus'])] ?? str(o['fulfillmentStatus'])} · ${str(o['customerRef'])} · ${str(o['total'])} ${str(o['currency'])}'),
+        subtitle: Text('${orderStages[str(o['manualStatus'])] ?? fulfillmentStages[str(o['fulfillmentStatus'])] ?? str(o['fulfillmentStatus'])} · ${str(o['customerRef'])} · ${str(o['total'])} ${str(o['currency'])}'),
         children: [
+          ListTile(title: Text(o['manualStatus'] == null ? 'طلب Shopify' : 'طلب يدوي'),
+            subtitle: Text('الدفع: ${paymentStages[str(o['financialStatus'])] ?? str(o['financialStatus'])}')),
           ListTile(title: const Text('بيانات العميل'), subtitle: Text('${str(o['customerRef'])}\n${str(o['customerPhone'])}\n${str(o['customerAddress'])}')),
           ListTile(title: const Text('الديبوزت'), subtitle: Text('${str(o['depositAmount'])} ${str(o['currency'])}')),
           ...((o['items'] as List).map(json)).map((item) => ListTile(
@@ -132,7 +138,9 @@ class _NewOrderPageState extends State<NewOrderPage> {
         depositValue < 0 || depositValue >= total ||
         (hasDeposit && depositValue == 0) ||
         lines.any((line) => line.variantId == null ||
-          (int.tryParse(line.quantity.text) ?? 0) < 1) ||
+          (int.tryParse(line.quantity.text) ?? 0) < 1 ||
+          double.tryParse(line.price.text) == null ||
+          (double.tryParse(line.price.text) ?? -1) < 0) ||
         lines.map((line) => line.variantId).toSet().length != lines.length) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('راجع بيانات العميل والأصناف والسعر والديبوزت')));
       return;

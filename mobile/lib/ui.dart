@@ -47,7 +47,7 @@ class DataView extends StatefulWidget {
   final ErpApi api;
   final String path;
   final Widget Function(BuildContext, Json, VoidCallback) item;
-  final Widget? action;
+  final Widget Function(BuildContext, VoidCallback)? action;
   @override
   State<DataView> createState() => _DataViewState();
 }
@@ -71,7 +71,7 @@ class _DataViewState extends State<DataView> {
       final entries = snapshot.data!;
       return RefreshIndicator(onRefresh: () async { reload(); await future; },
         child: ListView(padding: const EdgeInsets.all(12), children: [
-          if (widget.action != null) widget.action!,
+          if (widget.action != null) widget.action!(context, reload),
           if (entries.isEmpty) const Padding(padding: EdgeInsets.all(28),
             child: Center(child: Text('لا توجد بيانات بعد'))),
           ...entries.map((entry) => widget.item(context, entry, reload)),

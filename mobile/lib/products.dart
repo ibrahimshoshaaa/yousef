@@ -11,8 +11,10 @@ class ProductsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => DataView(api: api, path: '/api/products',
-    action: canWrite ? FilledButton.icon(onPressed: () => openPage(context,
-      ProductForm(api: api)), icon: const Icon(Icons.add), label: const Text('إضافة منتج')) : null,
+    action: canWrite ? (context, reload) => FilledButton.icon(onPressed: () async {
+      final saved = await openPage<bool>(context, ProductForm(api: api));
+      if (saved == true) reload();
+    }, icon: const Icon(Icons.add), label: const Text('إضافة منتج')) : null,
     item: (context, product, reload) => Card(child: ListTile(
       title: Text(str(product['title'])),
       subtitle: Text('${(product['variants'] as List?)?.length ?? 0} أحجام'),
@@ -42,10 +44,9 @@ class _ProductFormState extends State<ProductForm> {
         (double.tryParse(price.text) ?? -1) < 0) return;
     setState(() => busy = true);
     try {
-      final response = await widget.api.post('/api/products', {'title': title.text.trim()});
-      final productId = json(response['data'])['id'];
-      await widget.api.post('/api/products/$productId/variants', {
-        'title': variant.text.trim(), 'sku': sku.text.trim(), 'price': double.parse(price.text),
+      await widget.api.post('/api/mobile/products', {
+        'title': title.text.trim(), 'variantTitle': variant.text.trim(),
+        'sku': sku.text.trim(), 'price': double.parse(price.text),
       });
       if (mounted) Navigator.pop(context, true);
     } catch (e) {

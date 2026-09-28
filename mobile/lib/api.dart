@@ -14,7 +14,8 @@ class ApiException implements Exception {
 class ErpApi {
   ErpApi({http.Client? client}) : _client = client ?? http.Client();
 
-  static const _baseUrl = 'https://yousef-beryl.vercel.app';
+  static const _baseUrl = String.fromEnvironment('API_BASE_URL',
+    defaultValue: 'https://yousef-beryl.vercel.app');
   static const _storage = FlutterSecureStorage();
   static const _tokenKey = 'erp_mobile_session';
   final http.Client _client;
@@ -27,6 +28,8 @@ class ErpApi {
       _request('POST', path, body: body);
   Future<dynamic> put(String path, Map<String, dynamic> body) =>
       _request('PUT', path, body: body);
+  Future<dynamic> patch(String path, Map<String, dynamic> body) =>
+      _request('PATCH', path, body: body);
 
   Future<void> login(String email, String password) async {
     final result = await post('/api/mobile/auth/login', {
@@ -56,10 +59,12 @@ class ErpApi {
     final uri = Uri.parse('$_baseUrl$path');
     final response = await (method == 'GET'
         ? _client.get(uri, headers: headers)
+        : method == 'PATCH'
+            ? _client.patch(uri, headers: headers, body: jsonEncode(body))
         : method == 'PUT'
             ? _client.put(uri, headers: headers, body: jsonEncode(body))
             : _client.post(uri, headers: headers, body: jsonEncode(body)))
-        .timeout(const Duration(seconds: 30));
+        .timeout(Duration(seconds: path.endsWith('/sync') ? 120 : 30));
     dynamic decoded;
     try {
       decoded = jsonDecode(utf8.decode(response.bodyBytes));

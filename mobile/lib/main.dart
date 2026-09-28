@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'api.dart';
 import 'finance.dart';
 import 'inventory.dart';
+import 'materials.dart';
 import 'more.dart';
 import 'orders.dart';
 import 'products.dart';
@@ -144,11 +145,13 @@ class _ErpHomeState extends State<ErpHome> {
   @override
   Widget build(BuildContext context) {
     const titles = ['الرئيسية', 'الطلبات', 'المخزون', 'المنتجات', 'المصروفات',
-      'المرتجعات', 'الوصفات', 'الاستهلاك', 'التقارير', 'الإعدادات', 'Shopify'];
+      'المرتجعات', 'الوصفات', 'الاستهلاك', 'التقارير', 'الإعدادات', 'Shopify',
+      'المواد الخام', 'الموردون'];
     const icons = [Icons.dashboard_outlined, Icons.receipt_long_outlined,
       Icons.warehouse_outlined, Icons.inventory_2_outlined, Icons.payments_outlined,
       Icons.undo_outlined, Icons.science_outlined, Icons.trending_down_outlined,
-      Icons.bar_chart_outlined, Icons.settings_outlined, Icons.store_outlined];
+      Icons.bar_chart_outlined, Icons.settings_outlined, Icons.store_outlined,
+      Icons.grain_outlined, Icons.local_shipping_outlined];
     return FutureBuilder<dynamic>(future: account, builder: (context, snapshot) {
       if (!snapshot.hasData) return Scaffold(body: Center(child: snapshot.hasError
         ? Column(mainAxisSize: MainAxisSize.min, children: [Text('${snapshot.error}'),
@@ -161,7 +164,7 @@ class _ErpHomeState extends State<ErpHome> {
       final manager = role == 'OWNER' || role == 'MANAGER';
       final owner = role == 'OWNER';
       final visible = [0, 1, 2, if (manager) 3, if (manager) 4, if (manager) 5,
-        if (manager) 6, 7, if (manager) 8, 9, if (owner) 10];
+        if (manager) 6, 7, if (manager) 8, 9, if (owner) 10, 11, 12];
       Widget body = switch (selected) {
         0 => _Dashboard(api: widget.api, user: user, onSelect: switchTo,
           manager: manager),
@@ -174,7 +177,9 @@ class _ErpHomeState extends State<ErpHome> {
         7 => ConsumptionPage(api: widget.api),
         8 => ReportsPage(api: widget.api),
         9 => SettingsPage(api: widget.api, isOwner: owner),
-        _ => ShopifyPage(api: widget.api),
+        10 => ShopifyPage(api: widget.api),
+        11 => MaterialsPage(api: widget.api, canWrite: manager),
+        _ => SuppliersPage(api: widget.api, canWrite: manager),
       };
       return Scaffold(
         key: scaffoldKey,
@@ -250,6 +255,8 @@ class _DashboardState extends State<_Dashboard> {
         Wrap(spacing: 8, runSpacing: 8, children: [
           if (widget.manager) FilledButton.icon(onPressed: () => openPage(context, NewOrderPage(api: widget.api)),
             icon: const Icon(Icons.add), label: const Text('تسجيل طلب')),
+          if (widget.manager) OutlinedButton(onPressed: () => openPage(context, ProductForm(api: widget.api)),
+            child: const Text('إضافة منتج')),
           if (widget.manager) OutlinedButton(onPressed: () => openPage(context, StockForm(api: widget.api)),
             child: const Text('إضافة مخزون')),
           if (widget.manager) OutlinedButton(onPressed: () => openPage(context, ExpenseForm(api: widget.api)),
