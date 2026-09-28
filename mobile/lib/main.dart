@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
 
 import 'api.dart';
+import 'finance.dart';
+import 'inventory.dart';
+import 'more.dart';
+import 'orders.dart';
+import 'products.dart';
+import 'recipes.dart';
+import 'ui.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -129,71 +136,108 @@ class ErpHome extends StatefulWidget {
 
 class _ErpHomeState extends State<ErpHome> {
   int selected = 0;
-  late Future<dynamic> contents = load();
+  final scaffoldKey = GlobalKey<ScaffoldState>();
+  late Future<dynamic> account = widget.api.get('/api/mobile/me');
 
-  Future<dynamic> load() => widget.api.get(switch (selected) {
-        0 => '/api/mobile/me',
-        1 => '/api/mobile/orders',
-        2 => '/api/products',
-        3 => '/api/materials',
-        _ => '/api/expenses',
-      });
-
-  void switchTo(int index) => setState(() { selected = index; contents = load(); });
+  void switchTo(int index) => setState(() => selected = index);
 
   @override
   Widget build(BuildContext context) {
-    const titles = ['الرئيسية', 'الطلبات', 'المنتجات', 'المخزون', 'المصروفات'];
-    return Scaffold(
-      appBar: AppBar(title: Text(titles[selected]), actions: [
-        IconButton(icon: const Icon(Icons.refresh), tooltip: 'تحديث', onPressed: () => setState(() => contents = load())),
-        IconButton(icon: const Icon(Icons.logout), tooltip: 'تسجيل الخروج', onPressed: () async {
-          try { await widget.api.logout(); } finally { widget.onLogout(); }
-        }),
-      ]),
-      body: FutureBuilder<dynamic>(
-        future: contents,
-        builder: (context, snapshot) {
-          if (!snapshot.hasData && !snapshot.hasError) return const Center(child: CircularProgressIndicator());
-          if (snapshot.hasError) return Center(child: Padding(padding: const EdgeInsets.all(24),
-              child: Text('تعذر تحميل البيانات: ${snapshot.error}')));
-          final result = snapshot.data as Map<String, dynamic>;
-          final data = result['data'];
-          if (selected == 0 && data is Map) {
-            return ListView(padding: const EdgeInsets.all(16), children: [
-              Card(child: ListTile(title: Text('أهلًا ${data['name'] ?? data['email']}'),
-                  subtitle: Text((data['store'] as Map)['name']?.toString() ?? ''))),
-              for (var i = 1; i < titles.length; i++)
-                Card(child: ListTile(title: Text(titles[i]), trailing: const Icon(Icons.chevron_left),
-                    onTap: () => switchTo(i))),
-            ]);
-          }
-          final entries = data is List ? data : <dynamic>[];
-          if (entries.isEmpty) return const Center(child: Text('لا توجد بيانات لعرضها'));
-          return ListView.builder(
-            padding: const EdgeInsets.all(12), itemCount: entries.length,
-            itemBuilder: (context, index) {
-              final item = entries[index] as Map<String, dynamic>;
-              final title = selected == 1 ? item['orderNumber'] : item['title'] ?? item['name'];
-              final detail = selected == 1 ? '${item['customerRef'] ?? ''} · ${item['total'] ?? ''} ${item['currency'] ?? ''}'
-                  : item['unit'] ?? item['description'] ?? '';
-              return Card(child: ExpansionTile(title: Text(title?.toString() ?? '—'),
-                subtitle: Text(detail.toString()),
-                children: [Padding(padding: const EdgeInsets.all(16),
-                  child: Text(item.entries.where((entry) => entry.value != null)
-                    .map((entry) => '${entry.key}: ${entry.value}').join('\n')))]));
-            },
-          );
-        },
-      ),
-      bottomNavigationBar: NavigationBar(selectedIndex: selected, onDestinationSelected: switchTo,
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.dashboard_outlined), label: 'الرئيسية'),
-          NavigationDestination(icon: Icon(Icons.receipt_long_outlined), label: 'الطلبات'),
-          NavigationDestination(icon: Icon(Icons.inventory_2_outlined), label: 'المنتجات'),
-          NavigationDestination(icon: Icon(Icons.warehouse_outlined), label: 'المخزون'),
-          NavigationDestination(icon: Icon(Icons.payments_outlined), label: 'المصروفات'),
+    const titles = ['الرئيسية', 'الطلبات', 'المخزون', 'المنتجات', 'المصروفات',
+      'المرتجعات', 'الوصفات', 'الاستهلاك', 'التقارير', 'الإعدادات', 'Shopify'];
+    const icons = [Icons.dashboard_outlined, Icons.receipt_long_outlined,
+      Icons.warehouse_outlined, Icons.inventory_2_outlined, Icons.payments_outlined,
+      Icons.undo_outlined, Icons.science_outlined, Icons.trending_down_outlined,
+      Icons.bar_chart_outlined, Icons.settings_outlined, Icons.store_outlined];
+    return FutureBuilder<dynamic>(future: account, builder: (context, snapshot) {
+      if (!snapshot.hasData) return Scaffold(body: Center(child: snapshot.hasError
+        ? Column(mainAxisSize: MainAxisSize.min, children: [Text('${snapshot.error}'),
+          TextButton(onPressed: () => setState(() => account = widget.api.get('/api/mobile/me')),
+            child: const Text('إعادة المحاولة')),
+          TextButton(onPressed: widget.onLogout, child: const Text('تسجيل الدخول مجددًا'))])
+        : const CircularProgressIndicator()));
+      final user = json(snapshot.data['data']);
+      final role = str(user['role']);
+      final manager = role == 'OWNER' || role == 'MANAGER';
+      final owner = role == 'OWNER';
+      final visible = [0, 1, 2, if (manager) 3, if (manager) 4, if (manager) 5,
+        if (manager) 6, 7, if (manager) 8, 9, if (owner) 10];
+      Widget body = switch (selected) {
+        0 => _Dashboard(api: widget.api, user: user, onSelect: switchTo,
+          manager: manager),
+        1 => OrdersPage(api: widget.api, canWrite: manager),
+        2 => InventoryPage(api: widget.api, canWrite: manager),
+        3 => ProductsPage(api: widget.api, canWrite: manager, canShopify: owner),
+        4 => ExpensesPage(api: widget.api, canWrite: manager),
+        5 => ReturnsPage(api: widget.api, canWrite: manager),
+        6 => RecipesPage(api: widget.api, canWrite: manager),
+        7 => ConsumptionPage(api: widget.api),
+        8 => ReportsPage(api: widget.api),
+        9 => SettingsPage(api: widget.api, isOwner: owner),
+        _ => ShopifyPage(api: widget.api),
+      };
+      return Scaffold(
+        key: scaffoldKey,
+        appBar: AppBar(title: Text(titles[selected]), actions: [
+          IconButton(icon: const Icon(Icons.logout), tooltip: 'تسجيل الخروج',
+            onPressed: () async { try { await widget.api.logout(); }
+              finally { widget.onLogout(); } }),
         ]),
-    );
+        drawer: Drawer(child: SafeArea(child: ListView(children: [
+          const DrawerHeader(child: Center(child: Text('Perfume ERP'))),
+          for (final i in visible) ListTile(leading: Icon(icons[i]),
+            title: Text(titles[i]), selected: selected == i,
+            onTap: () { Navigator.pop(context); switchTo(i); }),
+        ]))),
+        body: KeyedSubtree(key: ValueKey(selected), child: body),
+        bottomNavigationBar: NavigationBar(
+          selectedIndex: selected < 3 ? selected : 3,
+          onDestinationSelected: (index) => index == 3
+            ? scaffoldKey.currentState?.openDrawer() : switchTo(index),
+          destinations: [
+            for (final i in [0, 1, 2]) NavigationDestination(icon: Icon(icons[i]), label: titles[i]),
+            const NavigationDestination(icon: Icon(Icons.menu), label: 'المزيد'),
+          ]),
+      );
+    });
   }
+}
+
+class _Dashboard extends StatelessWidget {
+  const _Dashboard({required this.api, required this.user,
+    required this.onSelect, required this.manager});
+  final ErpApi api;
+  final Json user;
+  final ValueChanged<int> onSelect;
+  final bool manager;
+  @override
+  Widget build(BuildContext context) => FutureBuilder<dynamic>(
+    future: api.get('/api/mobile/home'), builder: (context, snapshot) {
+      if (!snapshot.hasData) return Center(child: snapshot.hasError
+        ? Text('تعذر تحميل لوحة التحكم: ${snapshot.error}')
+        : const CircularProgressIndicator());
+      final data = json(snapshot.data['data']);
+      return ListView(padding: const EdgeInsets.all(16), children: [
+        Card(child: ListTile(title: Text('أهلًا ${str(user['name']).isEmpty ? user['email'] : user['name']}'),
+          subtitle: Text(str((user['store'] as Map?)?['name'])))),
+        Wrap(spacing: 8, children: [
+          Chip(label: Text('الطلبات: ${data['orders']}')),
+          Chip(label: Text('الخامات: ${data['materials']}')),
+          if (data['pendingReturns'] != null) Chip(label: Text('مرتجعات معلقة: ${data['pendingReturns']}')),
+        ]),
+        Text('وصول سريع', style: Theme.of(context).textTheme.titleLarge),
+        const SizedBox(height: 8),
+        Wrap(spacing: 8, runSpacing: 8, children: [
+          if (manager) FilledButton.icon(onPressed: () => openPage(context, NewOrderPage(api: api)),
+            icon: const Icon(Icons.add), label: const Text('تسجيل طلب')),
+          if (manager) OutlinedButton(onPressed: () => openPage(context, StockForm(api: api)),
+            child: const Text('إضافة مخزون')),
+          if (manager) OutlinedButton(onPressed: () => openPage(context, ExpenseForm(api: api)),
+            child: const Text('إضافة مصروف')),
+          OutlinedButton(onPressed: () => onSelect(1), child: const Text('الطلبات')),
+          OutlinedButton(onPressed: () => onSelect(2), child: const Text('المخزون')),
+          if (manager) OutlinedButton(onPressed: () => onSelect(5), child: const Text('المرتجعات')),
+        ]),
+      ]);
+    });
 }

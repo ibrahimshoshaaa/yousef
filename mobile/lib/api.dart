@@ -25,6 +25,8 @@ class ErpApi {
 
   Future<dynamic> post(String path, Map<String, dynamic> body) =>
       _request('POST', path, body: body);
+  Future<dynamic> put(String path, Map<String, dynamic> body) =>
+      _request('PUT', path, body: body);
 
   Future<void> login(String email, String password) async {
     final result = await post('/api/mobile/auth/login', {
@@ -52,10 +54,18 @@ class ErpApi {
       if (token != null) 'Authorization': 'Bearer $token',
     };
     final uri = Uri.parse('$_baseUrl$path');
-    final response = method == 'POST'
-        ? await _client.post(uri, headers: headers, body: jsonEncode(body))
-        : await _client.get(uri, headers: headers);
-    final decoded = jsonDecode(utf8.decode(response.bodyBytes));
+    final response = await (method == 'GET'
+        ? _client.get(uri, headers: headers)
+        : method == 'PUT'
+            ? _client.put(uri, headers: headers, body: jsonEncode(body))
+            : _client.post(uri, headers: headers, body: jsonEncode(body)))
+        .timeout(const Duration(seconds: 30));
+    dynamic decoded;
+    try {
+      decoded = jsonDecode(utf8.decode(response.bodyBytes));
+    } on FormatException {
+      throw ApiException('تعذر قراءة رد السيرفر', response.statusCode);
+    }
     if (response.statusCode >= 400) {
       if (response.statusCode == 401 && token != null) {
         await _storage.delete(key: _tokenKey);
