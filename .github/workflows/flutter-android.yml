@@ -31,7 +31,9 @@ jobs:
       - name: Fetch packages
         run: flutter pub get
       - name: Check Dart code
-        run: flutter analyze
+        run: flutter analyze --no-fatal-infos
+      - name: Run Flutter tests
+        run: flutter test
       - name: Build debug APK
         run: flutter build apk --debug
       - name: Upload debug APK

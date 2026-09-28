@@ -83,6 +83,9 @@ class _StockFormState extends State<StockForm> {
           decoration: const InputDecoration(labelText: 'النوع'),
           items: [
             ...builtins.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value))),
+            if (category.startsWith('type:') &&
+              (snapshot.data == null || !snapshot.data!.any((t) => 'type:${t['id']}' == category)))
+              DropdownMenuItem(value: category, child: const Text('نوع جديد')),
             if (snapshot.hasData) ...snapshot.data!.where((t) => !builtins.values.contains(t['name']))
               .map((t) => DropdownMenuItem(value: 'type:${t['id']}', child: Text(str(t['name'])))),
           ], onChanged: (value) => setState(() => category = value!)),

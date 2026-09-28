@@ -203,7 +203,7 @@ class _ErpHomeState extends State<ErpHome> {
   }
 }
 
-class _Dashboard extends StatelessWidget {
+class _Dashboard extends StatefulWidget {
   const _Dashboard({required this.api, required this.user,
     required this.onSelect, required this.manager});
   final ErpApi api;
@@ -211,32 +211,52 @@ class _Dashboard extends StatelessWidget {
   final ValueChanged<int> onSelect;
   final bool manager;
   @override
+  State<_Dashboard> createState() => _DashboardState();
+}
+
+class _DashboardState extends State<_Dashboard> {
+  String period = '7d';
+  late Future<dynamic> report = load();
+  Future<dynamic> load() => widget.api.get('/api/mobile/home?period=$period');
+  void choose(String value) => setState(() { period = value; report = load(); });
+  @override
   Widget build(BuildContext context) => FutureBuilder<dynamic>(
-    future: api.get('/api/mobile/home'), builder: (context, snapshot) {
+    future: report, builder: (context, snapshot) {
       if (!snapshot.hasData) return Center(child: snapshot.hasError
         ? Text('تعذر تحميل لوحة التحكم: ${snapshot.error}')
         : const CircularProgressIndicator());
       final data = json(snapshot.data['data']);
+      final sales = json(data['sales']);
+      final cash = json(data['cash']);
+      final returns = json(data['returns']);
+      final expenses = json(data['expenses']);
       return ListView(padding: const EdgeInsets.all(16), children: [
-        Card(child: ListTile(title: Text('أهلًا ${str(user['name']).isEmpty ? user['email'] : user['name']}'),
-          subtitle: Text(str((user['store'] as Map?)?['name'])))),
-        Wrap(spacing: 8, children: [
-          Chip(label: Text('الطلبات: ${data['orders']}')),
-          Chip(label: Text('الخامات: ${data['materials']}')),
-          if (data['pendingReturns'] != null) Chip(label: Text('مرتجعات معلقة: ${data['pendingReturns']}')),
-        ]),
+        Card(child: ListTile(title: Text('أهلًا ${str(widget.user['name']).isEmpty ? widget.user['email'] : widget.user['name']}'),
+          subtitle: Text(str((widget.user['store'] as Map?)?['name'])))),
+        Wrap(spacing: 8, children: const {'today': 'اليوم', 'yesterday': 'أمس',
+          '7d': 'آخر ٧ أيام', '30d': 'آخر ٣٠ يوم', 'month': 'هذا الشهر',
+          'lastMonth': 'الشهر الماضي'}.entries.map((entry) => ChoiceChip(
+          label: Text(entry.value), selected: period == entry.key,
+          onSelected: (_) => choose(entry.key))).toList()),
+        for (final metric in <(String, dynamic)>[
+          ('إجمالي المبيعات', sales['gross']), ('صافي المبيعات', sales['net']),
+          ('الدفعات المستلمة', cash['received']), ('الطلبات', sales['orders']),
+          ('الوحدات المباعة', sales['units']), ('المرتجعات', returns['count']),
+          ('تكلفة المرتجعات', returns['costs']), ('المصروفات', expenses['total']),
+        ]) Card(child: ListTile(title: Text(metric.$1),
+          trailing: Text(str(metric.$2), style: Theme.of(context).textTheme.titleMedium))),
         Text('وصول سريع', style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 8),
         Wrap(spacing: 8, runSpacing: 8, children: [
-          if (manager) FilledButton.icon(onPressed: () => openPage(context, NewOrderPage(api: api)),
+          if (widget.manager) FilledButton.icon(onPressed: () => openPage(context, NewOrderPage(api: widget.api)),
             icon: const Icon(Icons.add), label: const Text('تسجيل طلب')),
-          if (manager) OutlinedButton(onPressed: () => openPage(context, StockForm(api: api)),
+          if (widget.manager) OutlinedButton(onPressed: () => openPage(context, StockForm(api: widget.api)),
             child: const Text('إضافة مخزون')),
-          if (manager) OutlinedButton(onPressed: () => openPage(context, ExpenseForm(api: api)),
+          if (widget.manager) OutlinedButton(onPressed: () => openPage(context, ExpenseForm(api: widget.api)),
             child: const Text('إضافة مصروف')),
-          OutlinedButton(onPressed: () => onSelect(1), child: const Text('الطلبات')),
-          OutlinedButton(onPressed: () => onSelect(2), child: const Text('المخزون')),
-          if (manager) OutlinedButton(onPressed: () => onSelect(5), child: const Text('المرتجعات')),
+          OutlinedButton(onPressed: () => widget.onSelect(1), child: const Text('الطلبات')),
+          OutlinedButton(onPressed: () => widget.onSelect(2), child: const Text('المخزون')),
+          if (widget.manager) OutlinedButton(onPressed: () => widget.onSelect(5), child: const Text('المرتجعات')),
         ]),
       ]);
     });

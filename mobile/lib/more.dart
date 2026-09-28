@@ -62,22 +62,36 @@ class SettingsPage extends StatefulWidget {
   State<SettingsPage> createState() => _SettingsPageState();
 }
 class _SettingsPageState extends State<SettingsPage> {
+  final name = TextEditingController();
   final amount = TextEditingController();
-  late Future<dynamic> current = widget.api.get('/api/settings/return-cost');
+  bool costing = false;
+  bool initialized = false;
+  late Future<dynamic> current = widget.api.get('/api/mobile/settings');
   @override
-  void dispose() { amount.dispose(); super.dispose(); }
+  void dispose() { name.dispose(); amount.dispose(); super.dispose(); }
   @override
   Widget build(BuildContext context) => ListView(padding: const EdgeInsets.all(16), children: [
     FutureBuilder<dynamic>(future: current, builder: (context, snapshot) {
       if (!snapshot.hasData) return const LinearProgressIndicator();
-      amount.text = amount.text.isEmpty ? str(snapshot.data['defaultReturnCost']) : amount.text;
+      final store = json(snapshot.data['data']);
+      if (!initialized) {
+        initialized = true;
+        name.text = str(store['name']);
+        amount.text = str(store['defaultReturnCost']);
+        costing = store['costingEnabled'] == true;
+      }
       return Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(children: [
-        const Text('تكلفة المرتجع الافتراضية'),
+        field('اسم المتجر', name),
+        ListTile(title: const Text('العملة'), subtitle: Text(str(store['currency']))),
+        ListTile(title: const Text('المنطقة الزمنية'), subtitle: Text(str(store['timezone']))),
         field('المبلغ (EGP)', amount, type: TextInputType.number),
+        SwitchListTile(title: const Text('إظهار التكلفة التقديرية'),
+          value: costing, onChanged: widget.isOwner ? (value) => setState(() => costing = value) : null),
         if (widget.isOwner) FilledButton(onPressed: () async {
           final value = double.tryParse(amount.text);
-          if (value == null || value < 0) return;
-          try { await perform(context, () => widget.api.put('/api/settings/return-cost', {'amount': value})); }
+          if (value == null || value < 0 || name.text.trim().length < 2) return;
+          try { await perform(context, () => widget.api.put('/api/mobile/settings',
+            {'name': name.text.trim(), 'defaultReturnCost': value, 'costingEnabled': costing})); }
           catch (_) { /* Error shown by helper. */ }
         }, child: const Text('حفظ الإعدادات')),
       ])));
