@@ -37,24 +37,68 @@ class _OrdersPageState extends State<OrdersPage> {
   @override
   Widget build(BuildContext context) => FutureBuilder<dynamic>(future: result, builder: (context, snapshot) {
     final body = <Widget>[
-      if (widget.canWrite) FilledButton.icon(onPressed: newOrder,
-        icon: const Icon(Icons.add), label: const Text('إضافة طلب')),
       Row(children: [
-        Expanded(child: TextField(controller: search,
-          onSubmitted: (_) { page = 1; reload(); },
-          decoration: const InputDecoration(labelText: 'رقم الطلب أو اسم العميل'))),
-        IconButton(onPressed: () { page = 1; reload(); }, icon: const Icon(Icons.search)),
+        const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+          children: [Text('الطلبات', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
+            Text('تابع كل طلب من مكان واحد',
+              style: TextStyle(color: Color(0xff718079), fontSize: 13))])),
+        if (widget.canWrite) FilledButton.icon(onPressed: newOrder,
+          icon: const Icon(Icons.add, size: 19), label: const Text('طلب جديد')),
       ]),
+      const SizedBox(height: 18),
+      TextField(controller: search,
+        onSubmitted: (_) { page = 1; reload(); },
+        decoration: InputDecoration(hintText: 'رقم الطلب أو اسم العميل',
+          prefixIcon: const Icon(Icons.search),
+          suffixIcon: IconButton(tooltip: 'بحث',
+            onPressed: () { page = 1; reload(); }, icon: const Icon(Icons.arrow_back)))),
+      const SizedBox(height: 14),
     ];
-    if (!snapshot.hasData && !snapshot.hasError) body.add(const Center(child: CircularProgressIndicator()));
+    if (!snapshot.hasData && !snapshot.hasError) body.add(const Padding(
+      padding: EdgeInsets.symmetric(vertical: 24), child: LinearProgressIndicator()));
     if (snapshot.hasError) body.add(TextButton(onPressed: reload, child: Text('إعادة المحاولة: ${snapshot.error}')));
     if (snapshot.hasData) {
       final data = snapshot.data as Map;
       final orders = (data['data'] as List).map(json);
-      body.addAll(orders.map((o) => Card(child: ExpansionTile(
-        title: Text('طلب #${str(o['orderNumber'])}'),
-        subtitle: Text('${orderStages[str(o['manualStatus'])] ?? fulfillmentStages[str(o['fulfillmentStatus'])] ?? str(o['fulfillmentStatus'])} · ${str(o['customerRef'])} · ${str(o['total'])} ${str(o['currency'])}'),
+      if (orders.isEmpty) body.add(const Padding(padding: EdgeInsets.all(32),
+        child: Center(child: Text('لا توجد طلبات بهذا البحث'))));
+      body.addAll(orders.map((o) {
+        final stage = orderStages[str(o['manualStatus'])] ??
+          fulfillmentStages[str(o['fulfillmentStatus'])] ?? str(o['fulfillmentStatus']);
+        final isReturned = o['manualStatus'] == 'RETURNED';
+        final isDelivered = o['manualStatus'] == 'DELIVERED';
+        final badgeColor = isReturned ? const Color(0xfffbebed) :
+          isDelivered ? const Color(0xffe4f3e9) : const Color(0xfffff3dc);
+        final badgeText = isReturned ? const Color(0xffa33146) :
+          isDelivered ? const Color(0xff24704a) : const Color(0xff8c682c);
+        final number = str(o['orderNumber']).replaceFirst(RegExp(r'^#+'), '');
+        return Padding(padding: const EdgeInsets.only(bottom: 10),
+          child: Card(child: ExpansionTile(
+        tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        collapsedShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(children: [
+          Expanded(child: Text('طلب #$number', textDirection: TextDirection.rtl,
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800))),
+          Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(color: badgeColor,
+              borderRadius: BorderRadius.circular(30)),
+            child: Text(stage, style: TextStyle(fontSize: 11,
+              color: badgeText, fontWeight: FontWeight.w700))),
+        ]),
+        subtitle: Padding(padding: const EdgeInsets.only(top: 8),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(str(o['customerRef']).isEmpty ? 'عميل غير محدد' : str(o['customerRef']),
+              maxLines: 1, overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: Color(0xff65746c), fontSize: 13)),
+            const SizedBox(height: 5),
+            Text('${str(o['total'])} ${str(o['currency'])} · ${(o['items'] as List).length} صنف',
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700,
+                color: Color(0xff173d34))),
+          ])),
         children: [
+          const Divider(),
           ListTile(title: Text(o['manualStatus'] == null ? 'طلب Shopify' : 'طلب يدوي'),
             subtitle: Text('الدفع: ${paymentStages[str(o['financialStatus'])] ?? str(o['financialStatus'])}')),
           ListTile(title: const Text('بيانات العميل'), subtitle: Text('${str(o['customerRef'])}\n${str(o['customerPhone'])}\n${str(o['customerAddress'])}')),
@@ -75,7 +119,8 @@ class _OrdersPageState extends State<OrdersPage> {
             ],
           ],
         ],
-      ))));
+      )));
+      }));
       body.add(Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
         TextButton(onPressed: page <= 1 ? null : () { page--; reload(); }, child: const Text('السابق')),
         Text('صفحة $page · ${data['count']} طلب'),
@@ -84,7 +129,7 @@ class _OrdersPageState extends State<OrdersPage> {
       ]));
     }
     return RefreshIndicator(onRefresh: () async { reload(); await result; },
-      child: ListView(padding: const EdgeInsets.all(16), children: body));
+      child: ListView(padding: const EdgeInsets.fromLTRB(16, 16, 16, 24), children: body));
   });
 
   Widget action(Json order, String status, String label, {bool destructive = false}) =>
