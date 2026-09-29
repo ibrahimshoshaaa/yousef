@@ -37,17 +37,17 @@ class _PerfumeErpAppState extends State<PerfumeErpApp> {
 
   @override
   Widget build(BuildContext context) => MaterialApp(
-        title: 'Perfume ERP',
+        title: 'Auraic',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xff123e57),
-            primary: const Color(0xff123e57),
+            seedColor: const Color(0xff191735),
+            primary: const Color(0xff191735),
             surface: Colors.white,
           ),
           scaffoldBackgroundColor: appCanvas,
           appBarTheme: const AppBarTheme(
-            backgroundColor: Color(0xff123e57),
+            backgroundColor: Color(0xff191735),
             foregroundColor: Colors.white,
             elevation: 0,
             scrolledUnderElevation: 0,
@@ -91,11 +91,28 @@ class _PerfumeErpAppState extends State<PerfumeErpApp> {
           child: child!,
         ),
         home: signedIn == null
-            ? const Scaffold(body: PageSkeleton())
+            ? const AuraicSplash()
             : signedIn!
                 ? ErpHome(api: api, onLogout: () => setState(() => signedIn = false))
                 : LoginPage(api: api, onLogin: () => setState(() => signedIn = true)),
       );
+}
+
+class AuraicSplash extends StatelessWidget {
+  const AuraicSplash({super.key});
+
+  @override
+  Widget build(BuildContext context) => const Scaffold(
+    backgroundColor: Color(0xff191735),
+    body: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+      SizedBox(width: 300, height: 190, child: Image(
+        image: AssetImage('assets/auraic-logo.jpg'), fit: BoxFit.cover)),
+      SizedBox(height: 26),
+      SizedBox(width: 76, child: LinearProgressIndicator(
+        minHeight: 2, color: Color(0xffffe8a1),
+        backgroundColor: Color(0x44ffe8a1))),
+    ])),
+  );
 }
 
 class LoginPage extends StatefulWidget {
@@ -139,19 +156,15 @@ class _LoginPageState extends State<LoginPage> {
         constraints: BoxConstraints(minHeight: viewport.maxHeight),
         child: Column(children: [
           Container(width: double.infinity, padding: const EdgeInsets.fromLTRB(28, 48, 28, 50),
-            decoration: const BoxDecoration(color: Color(0xff123e57),
+            decoration: const BoxDecoration(color: Color(0xff191735),
               borderRadius: BorderRadius.vertical(bottom: Radius.circular(32))),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Container(width: 56, height: 56,
-                decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(16)),
-                child: const Icon(Icons.spa_rounded, color: Colors.white, size: 30)),
-              const SizedBox(height: 28),
-              const Text('Perfume ERP', textDirection: TextDirection.ltr,
-                style: TextStyle(color: Colors.white, fontSize: 30, fontWeight: FontWeight.w800)),
-              const SizedBox(height: 7),
-              const Text('كل شغل العطور في مكان واحد',
-                style: TextStyle(color: Color(0xffc8dce6), fontSize: 15)),
+              const Center(child: SizedBox(width: 300, height: 170,
+                child: Image(image: AssetImage('assets/auraic-logo.jpg'),
+                  fit: BoxFit.cover))),
+              const SizedBox(height: 10),
+              const Center(child: Text('إدارة Auraic في مكان واحد',
+                style: TextStyle(color: Color(0xffffe8a1), fontSize: 15))),
             ])),
           Padding(padding: const EdgeInsets.fromLTRB(20, 28, 20, 28),
             child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 420),
@@ -256,7 +269,7 @@ class _ErpHomeState extends State<ErpHome> {
         key: scaffoldKey,
         appBar: AppBar(
           title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(selected == 0 ? str((user['store'] as Map?)?['name']) : titles[selected],
+            Text(selected == 0 ? 'Auraic' : titles[selected],
               maxLines: 1, overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800)),
             if (selected == 0) const Text('لوحة التحكم',
@@ -269,11 +282,11 @@ class _ErpHomeState extends State<ErpHome> {
         drawer: Drawer(child: SafeArea(child: Column(children: [
           Padding(padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
             child: Row(children: [
-              const CircleAvatar(radius: 22, backgroundColor: Color(0xff173d34),
-                child: Icon(Icons.spa_outlined, color: Colors.white)),
+              const CircleAvatar(radius: 22, backgroundColor: Color(0xff191735),
+                child: Image(image: AssetImage('assets/auraic-icon.png'))),
               const SizedBox(width: 12),
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start,
-                children: [Text(str(user['store'] is Map ? user['store']['name'] : 'Perfume ERP'),
+                children: [const Text('Auraic',
                   maxLines: 1, overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
                   Text(str(user['email']), maxLines: 1, overflow: TextOverflow.ellipsis,
