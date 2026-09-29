@@ -39,9 +39,9 @@ class _ReportsPageState extends State<ReportsPage> {
       label: Text(period == 'custom' && from != null && to != null
         ? '${date(from!)} – ${date(to!)}' : 'فترة مخصصة')),
     FutureBuilder<dynamic>(future: report, builder: (context, snapshot) {
-      if (!snapshot.hasData) return Center(child: snapshot.hasError
+      if (!snapshot.hasData) return snapshot.hasError
         ? TextButton(onPressed: () => choose(period), child: Text('${snapshot.error} · إعادة المحاولة'))
-        : const CircularProgressIndicator());
+        : const PageSkeleton(embedded: true);
       final data = json(snapshot.data['data']);
       final sales = json(data['sales']);
       final cash = json(data['cash']);
@@ -109,7 +109,7 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   Widget build(BuildContext context) => ListView(padding: const EdgeInsets.all(16), children: [
     FutureBuilder<dynamic>(future: current, builder: (context, snapshot) {
-      if (!snapshot.hasData) return const LinearProgressIndicator();
+      if (!snapshot.hasData) return const PageSkeleton(embedded: true);
       final store = json(snapshot.data['data']);
       if (!initialized) {
         initialized = true;
@@ -148,8 +148,8 @@ class _ShopifyPageState extends State<ShopifyPage> {
   @override
   Widget build(BuildContext context) => ListView(padding: const EdgeInsets.all(16), children: [
     FutureBuilder<dynamic>(future: status, builder: (context, snapshot) {
-      if (!snapshot.hasData) return Center(child: snapshot.hasError
-        ? Text('${snapshot.error}') : const CircularProgressIndicator());
+      if (!snapshot.hasData) return snapshot.hasError
+        ? Text('${snapshot.error}') : const PageSkeleton(embedded: true);
       final data = json(snapshot.data['data']);
       return Card(child: Column(children: [
         ListTile(title: const Text('متجر Shopify'), subtitle: Text(str(data['shopDomain'] ?? data['shop']))),
