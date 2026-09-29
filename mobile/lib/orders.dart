@@ -63,9 +63,10 @@ class _OrdersPageState extends State<OrdersPage> {
         child: Center(child: Text('لا توجد طلبات بهذا البحث'))));
       body.addAll(orders.map((o) {
         final stage = orderStages[str(o['manualStatus'])] ??
+          orderStages[str(o['shopifyStage'])] ??
           fulfillmentStages[str(o['fulfillmentStatus'])] ?? str(o['fulfillmentStatus']);
         final isReturned = o['manualStatus'] == 'RETURNED';
-        final isDelivered = o['manualStatus'] == 'DELIVERED';
+        final isDelivered = o['manualStatus'] == 'DELIVERED' || o['shopifyStage'] == 'DELIVERED';
         final badgeColor = isReturned ? const Color(0xfffbebed) :
           isDelivered ? const Color(0xffe4f3e9) : const Color(0xfffff3dc);
         final badgeText = isReturned ? const Color(0xffa33146) :
@@ -117,6 +118,14 @@ class _OrdersPageState extends State<OrdersPage> {
               action(o, 'RETURNED', 'تم الإرجاع وإعادة الخامات', destructive: true),
             ],
           ],
+          if (widget.canWrite && o['shopifyId'] != null) ...[
+            if (o['shopifyStage'] == null && o['fulfillmentStatus'] == 'UNFULFILLED')
+              shopifyAction(o, 'PREPARED', 'تم التجهيز'),
+            if (o['shopifyStage'] == 'PREPARED')
+              shopifyAction(o, 'SHIPPING', 'تم الشحن في Shopify'),
+            if (o['shopifyStage'] == 'SHIPPING')
+              shopifyAction(o, 'DELIVERED', 'تم التسليم في Shopify'),
+          ],
         ],
       )));
       }));
@@ -143,6 +152,18 @@ class _OrdersPageState extends State<OrdersPage> {
           reload();
         } catch (_) { /* The shared helper displays the server error. */ }
       });
+
+  Widget shopifyAction(Json order, String status, String label) =>
+    ListTile(leading: const Icon(Icons.local_shipping_outlined), title: Text(label), onTap: () async {
+      if (!await confirm(context, status == 'PREPARED'
+        ? 'تأكيد تجهيز الطلب؟'
+        : 'سيتم تحديث حالة الطلب في Shopify أيضًا. تأكيد «$label»؟')) return;
+      try {
+        await perform(context, () => widget.api.post(
+          '/api/orders/${Uri.encodeComponent(str(order['id']))}/shopify-status', {'status': status}));
+        reload();
+      } catch (_) { /* The shared helper displays the server error. */ }
+    });
 }
 
 class NewOrderPage extends StatefulWidget {
