@@ -63,15 +63,29 @@ export async function syncAllProducts(storeId: string): Promise<{ count: number 
   const client = await getClientForStore(storeId);
   let after: string | null = null;
   let count = 0;
+  const seen = new Set<string>();
 
   do {
     const page = await client.fetchProductsPage(50, after);
     for (const node of page.nodes) {
       await upsertShopifyProduct(storeId, node);
+      seen.add(node.id);
       count++;
     }
     after = page.pageInfo.hasNextPage ? page.pageInfo.endCursor : null;
   } while (after);
+
+  // Reconcile deletions only after every page has been fetched successfully.
+  // Never remove order items or recipe versions used by past sales.
+  const linked = await db.product.findMany({
+    where: { storeId, shopifyId: { not: null }, NOT: { status: "ARCHIVED" } },
+    select: { id: true, shopifyId: true },
+  });
+  const missing = linked.filter(product => product.shopifyId && !seen.has(product.shopifyId));
+  if (missing.length) await db.product.updateMany({
+    where: { storeId, id: { in: missing.map(product => product.id) } },
+    data: { status: "ARCHIVED" },
+  });
 
   return { count };
 }
