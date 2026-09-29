@@ -21,19 +21,17 @@ flutter:
   uses-material-design: true
   assets:
     - assets/auraic-logo.jpg
-    - assets/auraic-icon.png
+    - assets/auraic-icon.jpg
 
 flutter_launcher_icons:
   android: true
   ios: false
-  image_path: assets/auraic-icon.png
+  image_path: assets/auraic-icon.jpg
 
 flutter_native_splash:
   color: "#191735"
-  image: assets/auraic-icon.png
   android: true
   ios: false
   web: false
   android_12:
     color: "#191735"
-    image: assets/auraic-icon.png
