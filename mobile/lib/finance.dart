@@ -87,16 +87,8 @@ class _ExpensesPageState extends State<ExpensesPage> {
         for (final e in visible) Padding(padding: const EdgeInsets.only(bottom: 12),
           child: Card(child: InkWell(
             borderRadius: BorderRadius.circular(20),
-            onTap: () => showDialog<void>(context: context, builder: (dialogContext) => AlertDialog(
-              title: Text(expenseCategoryName(str(json(e['category'])['name']))),
-              content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start,
-                children: [Text('المبلغ: ${str(e['amount'])} ${str(e['currency'])}'),
-                  const SizedBox(height: 10), Text('التاريخ: ${expenseDate(e['date'])}'),
-                  if (str(e['description']).trim().isNotEmpty) ...[
-                    const SizedBox(height: 10), Text(str(e['description'])),
-                  ]]),
-              actions: [TextButton(onPressed: () => Navigator.pop(dialogContext),
-                child: const Text('إغلاق'))])),
+            onTap: () => showDialog<void>(context: context,
+              builder: (_) => ExpenseDetailsDialog(api: widget.api, expense: e)),
             child: Padding(padding: const EdgeInsets.all(16), child: Row(children: [
               Container(width: 42, height: 42,
                 decoration: BoxDecoration(color: const Color(0xffe8f0f5),
@@ -123,6 +115,88 @@ class _ExpensesPageState extends State<ExpensesPage> {
             ]))))),
       ]));
   });
+}
+
+class ExpenseDetailsDialog extends StatefulWidget {
+  const ExpenseDetailsDialog({required this.api, required this.expense, super.key});
+  final ErpApi api;
+  final Json expense;
+  @override
+  State<ExpenseDetailsDialog> createState() => _ExpenseDetailsDialogState();
+}
+
+class _ExpenseDetailsDialogState extends State<ExpenseDetailsDialog> {
+  late Future<Json> details = load();
+  Future<Json> load() async => json((await widget.api.get('/api/expenses/${widget.expense['id']}'))['data']);
+
+  Widget detail(String title, dynamic value) => Padding(
+    padding: const EdgeInsets.only(bottom: 12),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(title, style: const TextStyle(fontSize: 12, color: appMuted)),
+      const SizedBox(height: 3),
+      Text(str(value), style: const TextStyle(fontWeight: FontWeight.w700, color: appInk)),
+    ]));
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: Text(expenseCategoryName(str(json(widget.expense['category'])['name']))),
+    scrollable: true,
+    content: SizedBox(width: double.maxFinite, child: FutureBuilder<Json>(future: details,
+      builder: (context, snapshot) {
+        if (snapshot.hasError) return TextButton.icon(
+          onPressed: () => setState(() => details = load()),
+          icon: const Icon(Icons.refresh), label: const Text('تعذر تحميل التفاصيل · حاول مجددًا'));
+        if (!snapshot.hasData) return const Padding(padding: EdgeInsets.all(20),
+          child: Center(child: CircularProgressIndicator()));
+        final expense = snapshot.data!;
+        final ret = expense['return'] is Map ? json(expense['return']) : null;
+        final order = ret?['order'] is Map ? json(ret!['order']) : null;
+        final purchase = expense['purchase'] is Map ? json(expense['purchase']) : null;
+        final number = str(order?['orderNumber']).replaceFirst(RegExp(r'^#+'), '');
+        return Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min,
+          children: [
+            detail('قيمة المصروف', '${str(expense['amount'])} ${str(expense['currency'])}'),
+            detail('التاريخ', expenseDate(expense['date'])),
+            if (order != null) ...[
+              const Divider(height: 24),
+              const FormSection(title: 'الطلب المرتبط بالمرتجع'),
+              detail('رقم الطلب / الفاتورة', number.isEmpty ? 'غير مسجل' : '#$number'),
+              if (str(order['customerRef']).isNotEmpty) detail('العميل', order['customerRef']),
+              if (str(order['customerPhone']).isNotEmpty) detail('الهاتف', order['customerPhone']),
+              if (str(order['customerAddress']).isNotEmpty) detail('العنوان', order['customerAddress']),
+              if (order['total'] != null) detail('قيمة الطلب',
+                '${str(order['total'])} ${str(order['currency'])}'),
+              if (str(ret?['reason']).isNotEmpty) detail('سبب الإرجاع', ret?['reason']),
+              if (ret?['items'] is List && (ret!['items'] as List).isNotEmpty) ...[
+                const Divider(height: 24),
+                const FormSection(title: 'الأصناف المرتجعة'),
+                for (final item in (ret['items'] as List).map(json))
+                  detail(str((item['orderItem'] as Map?)?['title']),
+                    'العدد: ${str(item['quantity'])}'),
+              ],
+            ] else if (expense['returnId'] != null) ...[
+              const Divider(height: 24),
+              const Text('بيانات الطلب المرتبط بهذا المرتجع غير متاحة حاليًا.'),
+            ] else if (purchase != null) ...[
+              const Divider(height: 24),
+              const FormSection(title: 'مشتريات الخامات'),
+              if (purchase['supplier'] is Map)
+                detail('المورد', (purchase['supplier'] as Map)['name']),
+              if (str(purchase['reference']).isNotEmpty)
+                detail('المرجع', purchase['reference']),
+              for (final item in (purchase['items'] as List? ?? []).map(json))
+                detail(str((item['material'] as Map?)?['name']),
+                  '${str(item['quantity'])} ${str((item['material'] as Map?)?['unit'])}'),
+            ] else ...[
+              if (str(expense['description']).isNotEmpty)
+                detail('الوصف', expense['description']),
+              if (str(expense['reference']).isNotEmpty)
+                detail('المرجع', expense['reference']),
+            ],
+          ]);
+      })),
+    actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('إغلاق'))],
+  );
 }
 
 class ExpenseForm extends StatefulWidget {
