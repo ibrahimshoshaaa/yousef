@@ -57,6 +57,19 @@ export class ShopifyClient {
     return data.order;
   }
 
+  async fetchDeliveryState(id: string) {
+    const data = await this.graphql<{ order: null | {
+      displayFulfillmentStatus: string;
+      fulfillments: { id: string; status: string; displayStatus: string; deliveredAt: string | null }[];
+    } }>(`query DeliveryState($id: ID!) {
+      order(id: $id) {
+        displayFulfillmentStatus
+        fulfillments(first: 100) { id status displayStatus deliveredAt }
+      }
+    }`, { id });
+    return data.order;
+  }
+
   async createFulfillment(fulfillmentOrderId: string) {
     const data = await this.graphql<{ fulfillmentCreate: {
       fulfillment: { id: string } | null;
