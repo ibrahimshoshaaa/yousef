@@ -52,13 +52,26 @@ class _ReportsPageState extends State<ReportsPage> {
       Widget section(String title, List<Widget> children) => Card(child: ExpansionTile(
         title: Text(title), initiallyExpanded: title == 'المبيعات', children: children));
       Widget line(String title, dynamic value) => ListTile(title: Text(title), trailing: Text(str(value)));
+      Widget kpi(String label, dynamic value, IconData icon) => Card(child: Padding(
+        padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+          children: [Icon(icon, color: appNavy, size: 21), const SizedBox(height: 12),
+            Text(label, style: const TextStyle(fontSize: 12, color: appMuted)),
+            const SizedBox(height: 5), Text(str(value), textDirection: TextDirection.ltr,
+              style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800, color: appInk))])));
       return Column(children: [
+        const SizedBox(height: 12),
+        Row(children: [Expanded(child: kpi('إجمالي المبيعات', sales['gross'], Icons.trending_up)),
+          const SizedBox(width: 10), Expanded(child: kpi('صافي المبيعات', sales['net'], Icons.show_chart))]),
+        const SizedBox(height: 10),
+        Row(children: [Expanded(child: kpi('الدفعات المستلمة', cash['received'], Icons.account_balance_wallet_outlined)),
+          const SizedBox(width: 10), Expanded(child: kpi('عدد الطلبات', sales['orders'], Icons.receipt_long_outlined))]),
+        const SizedBox(height: 16),
+        const FormSection(title: 'تفاصيل الفترة'),
         section('المبيعات', [
-          line('إجمالي المبيعات', sales['gross']), line('صافي المبيعات', sales['net']),
-          line('الطلبات', sales['orders']), line('الوحدات المباعة', sales['units']),
+          line('الوحدات المباعة', sales['units']),
           line('متوسط الطلب', sales['averageOrderValue']),
           line('الخصومات', sales['discounts']), line('المسترد', sales['refunded']),
-          line('الدفعات المستلمة', cash['received']), line('الديبوزت', cash['deposits']),
+          line('الديبوزت', cash['deposits']),
         ]),
         section('المنتجات', [for (final product in (data['products'] as List).map(json))
           ListTile(title: Text('${product['product']} · ${product['variant']}'),
@@ -170,17 +183,31 @@ class _ShopifyPageState extends State<ShopifyPage> {
         : const PageSkeleton(embedded: true);
       final data = json(snapshot.data['data']);
       final connection = data['connection'] is Map ? json(data['connection']) : data;
-      return Card(child: Column(children: [
-        ListTile(title: const Text('متجر Shopify'), subtitle: Text(str(connection['shopDomain'] ?? 'غير متصل'))),
-        ListTile(title: const Text('حالة الربط'), subtitle: Text(str(connection['status'] ?? 'غير متصل'))),
-        FilledButton(onPressed: () async {
+      final connected = connection['status'] == 'CONNECTED';
+      final sync = data['syncState'] is Map ? json(data['syncState']) : const <String, dynamic>{};
+      return Column(children: [
+        Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [const Icon(Icons.storefront_outlined, color: appNavy),
+            const SizedBox(width: 10), Expanded(child: Text(
+              str(connection['shopDomain'] ?? 'لا يوجد متجر متصل'),
+              style: const TextStyle(fontWeight: FontWeight.w800))),
+            StatusPill(label: connected ? 'متصل' : 'غير متصل',
+              color: connected ? const Color(0xff24704a) : const Color(0xffa33146))]),
+          if (sync['lastSuccessfulSyncAt'] != null) Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: Text('آخر مزامنة ناجحة: ${str(sync['lastSuccessfulSyncAt'])}',
+              style: const TextStyle(fontSize: 12, color: appMuted))),
+        ]))),
+        const SizedBox(height: 14),
+        SizedBox(width: double.infinity, child: FilledButton.icon(onPressed: connected ? () async {
           try { await perform(context, () => widget.api.post('/api/shopify/sync', {}), success: 'اكتملت المزامنة'); reload(); }
           catch (_) { /* Error shown by helper. */ }
-        }, child: const Text('مزامنة الآن')),
+        } : null, icon: const Icon(Icons.sync), label: const Text('مزامنة الآن'))),
         TextButton(onPressed: () => launchUrl(
           Uri.parse('https://yousef-beryl.vercel.app/dashboard/shopify'),
           mode: LaunchMode.externalApplication), child: const Text('إدارة الربط من المتصفح')),
-      ]));
+      ]);
     }),
   ]);
 }
