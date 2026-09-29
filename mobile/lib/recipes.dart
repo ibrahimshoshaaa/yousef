@@ -83,7 +83,23 @@ class _RecipeFormState extends State<RecipeForm> {
   final lines = <_RecipeLine>[_RecipeLine()];
   late Future<List<Json>> materials = rowsAsync('/api/materials');
   late Future<List<Json>> variants = rowsAsync('/api/mobile/catalog');
+  late Future<void> initial = loadInitial();
   Future<List<Json>> rowsAsync(String path) async => rows(await widget.api.get(path));
+  Future<void> loadInitial() async {
+    if (widget.recipeId == null) return;
+    final recipe = json((await widget.api.get('/api/recipes/${widget.recipeId}'))['data']);
+    final versions = (recipe['versions'] as List).map(json).toList();
+    final current = versions.where((v) => v['isCurrent'] == true).firstOrNull;
+    if (current == null) return;
+    for (final line in lines) { line.dispose(); }
+    lines.clear();
+    for (final item in (current['items'] as List).map(json)) {
+      final line = _RecipeLine()..materialId = str(item['materialId']);
+      line.quantity.text = str(item['quantity']);
+      lines.add(line);
+    }
+    if (lines.isEmpty) lines.add(_RecipeLine());
+  }
   String? variantId;
   bool busy = false;
   @override
@@ -118,10 +134,19 @@ class _RecipeFormState extends State<RecipeForm> {
   }
 
   @override
-  Widget build(BuildContext context) => FutureBuilder<List<Json>>(future: materials,
+  Widget build(BuildContext context) => FutureBuilder<void>(future: initial,
+    builder: (context, initialSnapshot) => FutureBuilder<List<Json>>(future: materials,
     builder: (context, materialSnapshot) => FormScaffold(
-      title: widget.recipeId == null ? 'إضافة وصفة' : 'نسخة وصفة جديدة',
+      title: widget.recipeId == null ? 'إضافة وصفة' : 'تعديل الوصفة',
       busy: busy, onSubmit: submit, children: [
+        if (widget.recipeId != null) const Padding(
+          padding: EdgeInsets.only(bottom: 14),
+          child: Text('عدّل الخامات والكميات. سيُستخدم التعديل في الطلبات القادمة، وتظل النسخة السابقة محفوظة.')),
+        if (initialSnapshot.connectionState != ConnectionState.done)
+          const LinearProgressIndicator(),
+        if (initialSnapshot.hasError) TextButton.icon(
+          onPressed: () => setState(() => initial = loadInitial()),
+          icon: const Icon(Icons.refresh), label: const Text('تعذر تحميل الوصفة · إعادة المحاولة')),
         if (widget.recipeId == null) ...[
           FutureBuilder<List<Json>>(future: variants, builder: (context, snapshot) =>
             snapshot.hasData ? DropdownButtonFormField<String>(value: variantId,
@@ -136,7 +161,7 @@ class _RecipeFormState extends State<RecipeForm> {
           field('اسم الوصفة', name),
         ],
         if (materialSnapshot.hasError) Text('تعذر تحميل الخامات: ${materialSnapshot.error}'),
-        if (materialSnapshot.hasData) ...[
+        if (materialSnapshot.hasData && initialSnapshot.connectionState == ConnectionState.done && !initialSnapshot.hasError) ...[
           for (var i = 0; i < lines.length; i++) Card(child: Column(children: [
             DropdownButtonFormField<String>(value: lines[i].materialId,
               decoration: const InputDecoration(labelText: 'الخامة'),
@@ -150,5 +175,5 @@ class _RecipeFormState extends State<RecipeForm> {
           TextButton.icon(onPressed: () => setState(() => lines.add(_RecipeLine())),
             icon: const Icon(Icons.add), label: const Text('إضافة خامة')),
         ],
-      ]));
+      ])));
 }
