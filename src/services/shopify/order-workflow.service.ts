@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { getClientForStore } from "@/services/shopify/connection.service";
 import { upsertShopifyOrder } from "@/services/shopify/order-sync.service";
 import { SHOPIFY_FULFILLMENT_SCOPES } from "@/lib/config";
+import { hasShopifyScope } from "@/lib/shopify/scopes";
 
 export const shopifyOrderStages = ["PREPARED", "SHIPPING", "DELIVERED"] as const;
 export type ShopifyOrderStage = (typeof shopifyOrderStages)[number];
@@ -27,7 +28,7 @@ export async function updateShopifyOrderStage(params: {
     const connection = await db.shopifyConnection.findUnique({ where: { storeId } });
     const granted = new Set(connection?.scope?.split(",").map(s => s.trim()) ?? []);
     const needed = stage === "SHIPPING" ? SHOPIFY_FULFILLMENT_SCOPES.slice(0, 2) : ["write_fulfillments"];
-    const missing = needed.filter(s => !granted.has(s));
+    const missing = needed.filter(s => !hasShopifyScope(granted, s));
     if (connection?.status !== "CONNECTED" || missing.length) {
       throw new ShopifyWorkflowError(`صلاحيات Shopify غير مفعّلة${missing.length ? `: ${missing.join(", ")}` : ""}. راجع صفحة Shopify ثم أعد ربط المتجر.`);
     }
