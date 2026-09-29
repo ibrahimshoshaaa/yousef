@@ -8,6 +8,7 @@ import { db } from "@/lib/db";
 import { can } from "@/lib/rbac";
 import Image from "next/image";
 import auraicIcon from "../../../mobile/assets/auraic-icon.jpg";
+import { MenuBackdrop } from "@/components/MenuBackdrop";
 
 export default async function DashboardLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   let session;
@@ -34,12 +35,13 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
       </aside>
 
       <header className="sticky top-0 z-30 border-b border-white/10 bg-[#191735] text-white lg:hidden">
-        <details className="group">
-          <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 marker:hidden [&::-webkit-details-marker]:hidden">
+        <details className="group relative">
+          <summary className="relative z-20 flex cursor-pointer list-none items-center justify-between px-4 py-3 marker:hidden [&::-webkit-details-marker]:hidden">
             <div className="flex items-center gap-3"><Image src={auraicIcon} alt="" className="size-10 rounded-xl object-cover" /><div><span className="font-bold">Auraic</span><span className="block max-w-40 truncate text-xs text-slate-300">{storeName}</span></div></div>
             <span className="rounded-lg border border-white/20 px-3 py-2 text-sm group-open:bg-white/10">☰ <span className="sr-only">القائمة</span></span>
           </summary>
-          <div className="max-h-[70vh] overflow-y-auto border-t border-white/10">
+          <MenuBackdrop />
+          <div className="absolute right-0 top-full z-10 max-h-[calc(100dvh-9rem)] w-[min(22rem,88vw)] overflow-y-auto rounded-bl-2xl border-t border-white/10 bg-[#191735] shadow-2xl">
             <NavLinks />
             <form action={logout} className="border-t border-white/10 p-3">
               <button type="submit" className="w-full rounded-xl px-4 py-3 text-right text-sm text-slate-300">تسجيل الخروج ←</button>
