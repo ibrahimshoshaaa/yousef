@@ -16,15 +16,27 @@ class PageSkeleton extends StatelessWidget {
   Widget build(BuildContext context) => ListView(
     padding: const EdgeInsets.all(16),
     children: [
-      Container(height: 20, width: 160, margin: const EdgeInsets.only(bottom: 18),
-        alignment: Alignment.centerRight,
-        child: Container(width: 160, color: const Color(0xffe4eae6))),
-      for (final height in const [150.0, 96.0, 96.0, 96.0])
+      Align(alignment: Alignment.centerRight,
+        child: Container(height: 22, width: 150,
+          decoration: BoxDecoration(color: const Color(0xffe5ebef),
+            borderRadius: BorderRadius.circular(9)))),
+      const SizedBox(height: 18),
+      for (final height in const [112.0, 92.0, 92.0])
         Container(height: height, margin: const EdgeInsets.only(bottom: 12),
-          decoration: BoxDecoration(color: const Color(0xffe8eeea),
-            borderRadius: BorderRadius.circular(20))),
-      const Center(child: Padding(padding: EdgeInsets.all(8),
-        child: SizedBox(width: 18, height: 18,
+          decoration: BoxDecoration(color: Colors.white,
+            border: Border.all(color: const Color(0xffe8edf0)),
+            borderRadius: BorderRadius.circular(18)),
+          child: Padding(padding: const EdgeInsets.all(18), child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center, children: [
+              Container(height: 15, width: 130, decoration: BoxDecoration(
+                color: const Color(0xffe5ebef), borderRadius: BorderRadius.circular(8))),
+              const SizedBox(height: 12),
+              Container(height: 12, width: 200, decoration: BoxDecoration(
+                color: const Color(0xffeef2f4), borderRadius: BorderRadius.circular(8))),
+            ]))),
+      const Padding(padding: EdgeInsets.only(top: 12), child: Center(
+        child: SizedBox(width: 20, height: 20,
           child: CircularProgressIndicator(strokeWidth: 2)))),
     ],
   );
