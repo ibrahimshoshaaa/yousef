@@ -11,9 +11,12 @@ String str(dynamic value) => value?.toString() ?? '';
 double amount(dynamic value) => double.tryParse(str(value)) ?? 0;
 
 class PageSkeleton extends StatelessWidget {
-  const PageSkeleton({super.key});
+  const PageSkeleton({this.embedded = false, super.key});
+  final bool embedded;
   @override
   Widget build(BuildContext context) => ListView(
+    shrinkWrap: embedded,
+    physics: embedded ? const NeverScrollableScrollPhysics() : null,
     padding: const EdgeInsets.all(16),
     children: [
       Align(alignment: Alignment.centerRight,
