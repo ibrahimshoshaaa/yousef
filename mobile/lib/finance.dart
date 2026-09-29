@@ -27,6 +27,8 @@ class _ExpensesPageState extends State<ExpensesPage> {
     final total = visible.fold<double>(0, (sum, e) => sum + amount(e['amount']));
     return RefreshIndicator(onRefresh: () async { reload(); await expenses; },
       child: ListView(padding: const EdgeInsets.all(16), children: [
+        const PageIntro(title: 'المصروفات', subtitle: 'تابع التكاليف حسب الفئة والتاريخ', icon: Icons.payments_outlined),
+        const SizedBox(height: 14),
         if (widget.canWrite) FilledButton.icon(onPressed: () async {
           final added = await openPage<bool>(context, ExpenseForm(api: widget.api));
           if (added == true) reload();
@@ -65,7 +67,7 @@ class _ExpenseFormState extends State<ExpenseForm> {
   void dispose() { categoryName.dispose(); amountController.dispose(); description.dispose(); super.dispose(); }
 
   Future<void> createCategory() async {
-    if (categoryName.text.trim().isEmpty) return;
+    if (categoryName.text.trim().isEmpty) { showMessage(context, 'اكتب اسم الفئة الجديدة'); return; }
     try {
       final result = await widget.api.post('/api/expenses/categories', {'name': categoryName.text.trim()});
       if (mounted) setState(() { selected = str(json(result['data'])['id']); categories = getCategories(); });
@@ -74,7 +76,9 @@ class _ExpenseFormState extends State<ExpenseForm> {
 
   Future<void> submit() async {
     final value = double.tryParse(amountController.text);
-    if (selected == null || value == null || value <= 0) return;
+    if (selected == null || value == null || value <= 0) {
+      showMessage(context, 'اختر فئة وأدخل مبلغًا أكبر من صفر'); return;
+    }
     setState(() => busy = true);
     try {
       await perform(context, () => widget.api.post('/api/expenses', {
@@ -90,14 +94,16 @@ class _ExpenseFormState extends State<ExpenseForm> {
   Widget build(BuildContext context) => FutureBuilder<List<Json>>(future: categories,
     builder: (context, snapshot) => FormScaffold(title: 'إضافة مصروف', busy: busy, onSubmit: submit,
       children: [
+        const FormSection(title: 'بيانات المصروف', subtitle: 'اختار فئة موجودة أو أنشئ فئة جديدة.'),
         if (snapshot.hasError) Text('تعذر تحميل الفئات: ${snapshot.error}'),
         if (snapshot.hasData) DropdownButtonFormField<String>(value: selected,
           decoration: const InputDecoration(labelText: 'الفئة'),
           items: snapshot.data!.where((e) => e['active'] != false)
             .map((e) => DropdownMenuItem(value: str(e['id']), child: Text(str(e['name'])))).toList(),
           onChanged: (value) => setState(() => selected = value)),
-        field('إضافة فئة جديدة', categoryName),
-        OutlinedButton(onPressed: createCategory, child: const Text('حفظ الفئة')),
+        Row(children: [Expanded(child: field('فئة جديدة', categoryName)),
+          const SizedBox(width: 8), OutlinedButton.icon(onPressed: createCategory,
+            icon: const Icon(Icons.add), label: const Text('إضافة'))]),
         field('المبلغ (EGP)', amountController, type: TextInputType.number),
         field('الوصف', description),
         ListTile(title: const Text('تاريخ المصروف'), subtitle: Text('${date.year}-${date.month}-${date.day}'),
@@ -113,6 +119,7 @@ class ReturnsPage extends StatelessWidget {
   final bool canWrite;
   @override
   Widget build(BuildContext context) => DataView(api: api, path: '/api/returns',
+    title: 'المرتجعات', subtitle: 'افحص الأصناف وحدد ما يعود للمخزون', icon: Icons.assignment_return_outlined,
     item: (context, ret, reload) => Card(child: ExpansionTile(
       title: Text('طلب #${str(json(ret['order'])['orderNumber'])}'),
       subtitle: Text('${str(ret['status'])} · ${str(ret['totalAmount'])} EGP'),
@@ -145,7 +152,12 @@ class _ReturnFormState extends State<ReturnForm> {
   void dispose() { cost.dispose(); super.dispose(); }
   Future<void> submit() async {
     final items = (widget.record['items'] as List).map(json).toList();
-    if (items.any((i) => (decisions[str(i['id'])] ?? 'UNKNOWN') == 'UNKNOWN')) return;
+    if (items.any((i) => (decisions[str(i['id'])] ?? 'UNKNOWN') == 'UNKNOWN')) {
+      showMessage(context, 'حدد حالة كل صنف في المرتجع'); return;
+    }
+    if (cost.text.trim().isNotEmpty && (double.tryParse(cost.text) ?? -1) < 0) {
+      showMessage(context, 'تكلفة المرتجع يجب أن تكون صفرًا أو أكثر'); return;
+    }
     if (!await confirm(context, 'سيتم اعتماد المرتجع وتسجيل تكلفته وحركة المخزون.')) return;
     setState(() => busy = true);
     try {
