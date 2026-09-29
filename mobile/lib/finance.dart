@@ -29,17 +29,31 @@ class _ExpensesPageState extends State<ExpensesPage> {
       child: ListView(padding: const EdgeInsets.all(16), children: [
         const PageIntro(title: 'المصروفات', subtitle: 'تابع التكاليف حسب الفئة والتاريخ', icon: Icons.payments_outlined),
         const SizedBox(height: 14),
-        if (widget.canWrite) FilledButton.icon(onPressed: () async {
-          final added = await openPage<bool>(context, ExpenseForm(api: widget.api));
-          if (added == true) reload();
-        }, icon: const Icon(Icons.add), label: const Text('إضافة مصروف')),
-        Card(child: ListTile(title: const Text('إجمالي المصروفات'),
-          subtitle: Text('$total EGP'), trailing: Text('${visible.length} مصروف'))),
+        Row(children: [Expanded(child: Card(child: Padding(
+          padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+            children: [const Text('إجمالي المصروفات', style: TextStyle(color: appMuted)),
+              const SizedBox(height: 6), Text('${total.toStringAsFixed(2)} EGP',
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: appInk)),
+              Text('${visible.length} مصروف', style: const TextStyle(fontSize: 12, color: appMuted))])))),
+          if (widget.canWrite) Padding(padding: const EdgeInsets.only(right: 10),
+            child: FilledButton.icon(onPressed: () async {
+              final added = await showModalBottomSheet<bool>(context: context,
+                isScrollControlled: true, useSafeArea: true, backgroundColor: appCanvas,
+                builder: (_) => FractionallySizedBox(heightFactor: 0.92,
+                  child: ExpenseForm(api: widget.api)));
+              if (added == true) reload();
+            }, icon: const Icon(Icons.add), label: const Text('إضافة'))),
+        ]),
+        const SizedBox(height: 14),
         DropdownButtonFormField<String>(value: category,
           decoration: const InputDecoration(labelText: 'تصفية بالفئة'),
           items: [const DropdownMenuItem(value: null, child: Text('كل الفئات')),
             ...categories.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value)))],
           onChanged: (value) => setState(() => category = value)),
+        const SizedBox(height: 16),
+        const FormSection(title: 'سجل المصروفات'),
+        if (visible.isEmpty) const Padding(padding: EdgeInsets.all(28),
+          child: Center(child: Text('لا توجد مصروفات في هذه الفئة'))),
         for (final e in visible) Card(child: ListTile(title: Text(str(json(e['category'])['name'])),
           subtitle: Text('${str(e['description'])} · ${str(e['date'])}'),
           trailing: Text('${str(e['amount'])} ${str(e['currency'])}'))),
@@ -57,19 +71,29 @@ class ExpenseForm extends StatefulWidget {
 class _ExpenseFormState extends State<ExpenseForm> {
   late Future<List<Json>> categories = getCategories();
   Future<List<Json>> getCategories() async => rows(await widget.api.get('/api/expenses/categories'));
-  final categoryName = TextEditingController();
   final amountController = TextEditingController();
   final description = TextEditingController();
   String? selected;
   DateTime date = DateTime.now();
   bool busy = false;
   @override
-  void dispose() { categoryName.dispose(); amountController.dispose(); description.dispose(); super.dispose(); }
+  void dispose() { amountController.dispose(); description.dispose(); super.dispose(); }
 
   Future<void> createCategory() async {
-    if (categoryName.text.trim().isEmpty) { showMessage(context, 'اكتب اسم الفئة الجديدة'); return; }
+    final controller = TextEditingController();
+    final name = await showDialog<String>(context: context, builder: (dialogContext) => AlertDialog(
+      title: const Text('فئة مصروف جديدة'),
+      content: TextField(controller: controller, autofocus: true,
+        decoration: const InputDecoration(labelText: 'اسم الفئة'),
+        onSubmitted: (value) => Navigator.pop(dialogContext, value.trim())),
+      actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('إلغاء')),
+        FilledButton(onPressed: () => Navigator.pop(dialogContext, controller.text.trim()),
+          child: const Text('إضافة'))]));
+    controller.dispose();
+    if (!mounted || name == null) return;
+    if (name.isEmpty) { showMessage(context, 'اكتب اسم الفئة الجديدة'); return; }
     try {
-      final result = await widget.api.post('/api/expenses/categories', {'name': categoryName.text.trim()});
+      final result = await widget.api.post('/api/expenses/categories', {'name': name});
       if (mounted) setState(() { selected = str(json(result['data'])['id']); categories = getCategories(); });
     } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e'))); }
   }
@@ -101,9 +125,8 @@ class _ExpenseFormState extends State<ExpenseForm> {
           items: snapshot.data!.where((e) => e['active'] != false)
             .map((e) => DropdownMenuItem(value: str(e['id']), child: Text(str(e['name'])))).toList(),
           onChanged: (value) => setState(() => selected = value)),
-        Row(children: [Expanded(child: field('فئة جديدة', categoryName)),
-          const SizedBox(width: 8), OutlinedButton.icon(onPressed: createCategory,
-            icon: const Icon(Icons.add), label: const Text('إضافة'))]),
+        Align(alignment: Alignment.centerRight, child: OutlinedButton.icon(onPressed: createCategory,
+          icon: const Icon(Icons.create_new_folder_outlined), label: const Text('إضافة فئة جديدة'))),
         field('المبلغ (EGP)', amountController, type: TextInputType.number),
         field('الوصف', description),
         ListTile(title: const Text('تاريخ المصروف'), subtitle: Text('${date.year}-${date.month}-${date.day}'),
