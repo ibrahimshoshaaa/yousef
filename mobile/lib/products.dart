@@ -13,6 +13,7 @@ class ProductsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => DataView(api: api, path: '/api/products',
+    title: 'المنتجات', subtitle: 'الأحجام والوصفات وربط Shopify', icon: Icons.inventory_2_outlined,
     action: canWrite ? (context, reload) => Wrap(spacing: 8, children: [
       FilledButton.icon(onPressed: () async {
         final saved = await openPage<bool>(context, SimpleProductPage(api: api));
@@ -129,7 +130,9 @@ class _ProductFormState extends State<ProductForm> {
   void dispose() { title.dispose(); variant.dispose(); sku.dispose(); price.dispose(); super.dispose(); }
   Future<void> save() async {
     if (title.text.trim().isEmpty || variant.text.trim().isEmpty ||
-        (double.tryParse(price.text) ?? -1) < 0) return;
+        (double.tryParse(price.text) ?? -1) < 0) {
+      showMessage(context, 'راجع اسم المنتج والحجم والسعر'); return;
+    }
     setState(() => busy = true);
     try {
       await widget.api.post('/api/mobile/products', {
@@ -148,24 +151,40 @@ class _ProductFormState extends State<ProductForm> {
       field('SKU', sku), field('السعر (EGP)', price, type: TextInputType.number)]);
 }
 
-class ProductDetail extends StatelessWidget {
+class ProductDetail extends StatefulWidget {
   const ProductDetail({required this.api, required this.product,
     required this.canWrite, required this.canShopify, super.key});
   final ErpApi api;
   final Json product;
   final bool canWrite;
   final bool canShopify;
+  @override
+  State<ProductDetail> createState() => _ProductDetailState();
+}
+
+class _ProductDetailState extends State<ProductDetail> {
+  late Future<Json> detail = fetch();
+  Future<Json> fetch() async => json((await widget.api.get('/api/products/${widget.product['id']}'))['data']);
+  void reload() => setState(() => detail = fetch());
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text(str(product['title']))),
-    body: ListView(padding: const EdgeInsets.all(16), children: [
+    appBar: AppBar(title: Text(str(widget.product['title']))),
+    body: FutureBuilder<Json>(future: detail, builder: (context, snapshot) {
+      if (!snapshot.hasData) return snapshot.hasError
+        ? Center(child: TextButton(onPressed: reload, child: const Text('تعذر التحميل · إعادة المحاولة')))
+        : const PageSkeleton();
+      final product = snapshot.data!;
+      return RefreshIndicator(onRefresh: () async { reload(); await detail; },
+        child: ListView(padding: const EdgeInsets.all(16), children: [
+      PageIntro(title: str(product['title']), subtitle: 'الأحجام والوصفات وحالة النشر', icon: Icons.inventory_2_outlined),
+      const SizedBox(height: 16),
       Card(child: ListTile(title: Text(str(product['title'])),
         subtitle: Text('معرّف Shopify: ${str(product['shopifyId']).isEmpty ? 'لم يُنشر' : str(product['shopifyId'])}'))),
-      if (canShopify && product['shopifyId'] == null) FilledButton.icon(
+      if (widget.canShopify && product['shopifyId'] == null) FilledButton.icon(
         onPressed: () async {
           if (!await confirm(context, 'نشر المنتج في Shopify؟ الخدمة تدعم منتجًا بحجم واحد.')) return;
-          try { await perform(context, () => api.post('/api/products/${product['id']}/publish-shopify', {})); }
+          try { await perform(context, () => widget.api.post('/api/products/${product['id']}/publish-shopify', {})); reload(); }
           catch (_) { /* Error shown by helper. */ }
         }, icon: const Icon(Icons.cloud_upload_outlined), label: const Text('نشر في Shopify')),
       for (final v in (product['variants'] as List).map(json)) Card(child: ExpansionTile(
@@ -174,16 +193,21 @@ class ProductDetail extends StatelessWidget {
           if (v['cost'] != null) ListTile(title: const Text('تكلفة التصنيع'), subtitle: Text('${v['cost']} EGP')),
           if (v['recipes'] is List && (v['recipes'] as List).isNotEmpty)
             const ListTile(title: Text('الوصفة مسجلة'), trailing: Icon(Icons.check_circle_outline)),
-          if (canWrite && (v['recipes'] is! List || (v['recipes'] as List).isEmpty))
+          if (widget.canWrite && (v['recipes'] is! List || (v['recipes'] as List).isEmpty))
             ListTile(title: const Text('أضف وصفة ليتم خصم الخامات عند البيع'),
               trailing: const Icon(Icons.chevron_left),
-              onTap: () => openPage(context, RecipeForm(api: api, initialVariantId: str(v['id'])))),
+              onTap: () async { final saved = await openPage<bool>(context,
+                RecipeForm(api: widget.api, initialVariantId: str(v['id']))); if (saved == true) reload(); }),
         ],
       )),
-      if (canWrite) OutlinedButton.icon(onPressed: () => openPage(context,
-        VariantForm(api: api, productId: str(product['id']))),
+      if (widget.canWrite) OutlinedButton.icon(onPressed: () async {
+        final saved = await openPage<bool>(context,
+          VariantForm(api: widget.api, productId: str(product['id'])));
+        if (saved == true) reload();
+      },
         icon: const Icon(Icons.add), label: const Text('إضافة حجم')),
-    ]),
+    ]));
+    }),
   );
 }
 
@@ -201,7 +225,9 @@ class _VariantFormState extends State<VariantForm> {
   void dispose() { title.dispose(); price.dispose(); super.dispose(); }
   Future<void> save() async {
     final value = double.tryParse(price.text);
-    if (value == null || value < 0 || title.text.trim().isEmpty) return;
+    if (value == null || value < 0 || title.text.trim().isEmpty) {
+      showMessage(context, 'راجع الحجم والسعر'); return;
+    }
     setState(() => busy = true);
     try {
       await perform(context, () => widget.api.post('/api/products/${widget.productId}/variants',

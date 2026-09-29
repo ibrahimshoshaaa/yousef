@@ -120,6 +120,7 @@ class _StockFormState extends State<StockForm> {
   void dispose() { name.dispose(); quantity.dispose(); price.dispose(); categoryName.dispose(); super.dispose(); }
 
   Future<void> addType() async {
+    if (categoryName.text.trim().isEmpty) { showMessage(context, 'اكتب اسم نوع الخامة'); return; }
     try {
       final response = await widget.api.post('/api/material-types', {'name': categoryName.text.trim()});
       if (!mounted) return;
@@ -167,9 +168,11 @@ class _StockFormState extends State<StockForm> {
           onChanged: (value) => setState(() => unit = value!)),
         field('الكمية', quantity, type: TextInputType.number),
         field('سعر الكمية كلها (جنيه)', price, type: TextInputType.number),
-        const Divider(), field('نوع جديد (اختياري)', categoryName),
-        OutlinedButton(onPressed: addType,
-          child: const Text('إضافة نوع جديد')),
+        const SizedBox(height: 12),
+        const FormSection(title: 'نوع خامة جديد', subtitle: 'أضفه إذا لم تجده في القائمة أعلاه.'),
+        field('اسم النوع الجديد', categoryName),
+        OutlinedButton.icon(onPressed: addType, icon: const Icon(Icons.add),
+          label: const Text('إضافة النوع واختياره')),
       ]));
 }
 
@@ -185,20 +188,28 @@ class MaterialDetail extends StatefulWidget {
 class _MaterialDetailState extends State<MaterialDetail> {
   final qty = TextEditingController();
   final reason = TextEditingController();
+  late Future<Json> material = fetchMaterial();
+  Future<Json> fetchMaterial() async => json((await widget.api.get('/api/materials/${widget.material['id']}'))['data']);
   late Future<dynamic> transactions = widget.api.get('/api/inventory/transactions?materialId=${Uri.encodeComponent(str(widget.material['id']))}');
   @override
   void dispose() { qty.dispose(); reason.dispose(); super.dispose(); }
 
   Future<void> adjust(bool add) async {
     final value = double.tryParse(qty.text);
-    if (value == null || value <= 0 || reason.text.trim().isEmpty) return;
+    if (value == null || value <= 0 || reason.text.trim().isEmpty) {
+      showMessage(context, 'اكتب كمية أكبر من صفر وسبب التسوية'); return;
+    }
     if (!await confirm(context, '${add ? 'إضافة' : 'خصم'} $value ${widget.material['unit']} من المخزون؟')) return;
     try {
       await perform(context, () => widget.api.post('/api/inventory/adjustments', {
         'materialId': widget.material['id'], 'quantity': add ? value : -value,
         'reason': reason.text.trim(),
       }));
-      setState(() => transactions = widget.api.get('/api/inventory/transactions?materialId=${Uri.encodeComponent(str(widget.material['id']))}'));
+      qty.clear(); reason.clear();
+      setState(() {
+        material = fetchMaterial();
+        transactions = widget.api.get('/api/inventory/transactions?materialId=${Uri.encodeComponent(str(widget.material['id']))}');
+      });
     } catch (_) { /* The shared helper displays the server error. */ }
   }
 
@@ -206,12 +217,33 @@ class _MaterialDetailState extends State<MaterialDetail> {
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: Text(str(widget.material['name']))),
     body: ListView(padding: const EdgeInsets.all(16), children: [
-      Card(child: ListTile(title: const Text('الرصيد الحالي'),
-        subtitle: Text('${str((widget.material['balance'] as Map?)?['quantity'])} ${str(widget.material['unit'])}'))),
-      Card(child: ListTile(title: const Text('سعر الوحدة الافتراضي'),
-        subtitle: Text('${str(widget.material['defaultCost'])} EGP'))),
+      PageIntro(title: str(widget.material['name']), subtitle: 'الرصيد وحركة المخزون', icon: Icons.warehouse_outlined),
+      const SizedBox(height: 16),
+      FutureBuilder<Json>(future: material, builder: (context, snapshot) {
+        if (!snapshot.hasData) return snapshot.hasError
+          ? TextButton(onPressed: () => setState(() => material = fetchMaterial()),
+              child: const Text('تعذر تحميل الرصيد · إعادة المحاولة'))
+          : const PageSkeleton(embedded: true);
+        final current = snapshot.data!;
+        return Row(children: [
+          Expanded(child: Card(child: Padding(padding: const EdgeInsets.all(16),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text('الرصيد الحالي', style: TextStyle(color: appMuted)),
+              const SizedBox(height: 12),
+              Text('${str((current['balance'] as Map?)?['quantity'])} ${str(current['unit'])}',
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+            ])))),
+          Expanded(child: Card(child: Padding(padding: const EdgeInsets.all(16),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text('تكلفة الوحدة', style: TextStyle(color: appMuted)),
+              const SizedBox(height: 12),
+              Text('${str(current['defaultCost'])} EGP',
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+            ])))),
+        ]);
+      }),
       if (widget.canWrite) ...[
-        const SizedBox(height: 16), Text('تسوية المخزون', style: Theme.of(context).textTheme.titleLarge),
+        const SizedBox(height: 16), const FormSection(title: 'تسوية المخزون', subtitle: 'سجّل سبب كل إضافة أو خصم.'),
         field('الكمية', qty, type: TextInputType.number), field('السبب', reason),
         Row(children: [
           Expanded(child: OutlinedButton(onPressed: () => adjust(false), child: const Text('خصم'))),
@@ -219,9 +251,12 @@ class _MaterialDetailState extends State<MaterialDetail> {
           Expanded(child: FilledButton(onPressed: () => adjust(true), child: const Text('إضافة'))),
         ]),
       ],
-      const SizedBox(height: 20), Text('حركة المخزون', style: Theme.of(context).textTheme.titleLarge),
+      const SizedBox(height: 20), const FormSection(title: 'حركة المخزون'),
       FutureBuilder<dynamic>(future: transactions, builder: (context, snapshot) {
-        if (!snapshot.hasData) return const PageSkeleton(embedded: true);
+        if (!snapshot.hasData) return snapshot.hasError
+          ? TextButton(onPressed: () => setState(() => transactions = widget.api.get('/api/inventory/transactions?materialId=${Uri.encodeComponent(str(widget.material['id']))}')),
+              child: const Text('تعذر تحميل الحركة · إعادة المحاولة'))
+          : const PageSkeleton(embedded: true);
         final data = (snapshot.data as Map)['data'];
         return Column(children: [for (final tx in (data as List).map(json))
           ListTile(title: Text(str(tx['type'])),

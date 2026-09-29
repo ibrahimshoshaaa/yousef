@@ -10,6 +10,59 @@ List<Json> rows(dynamic response) =>
 String str(dynamic value) => value?.toString() ?? '';
 double amount(dynamic value) => double.tryParse(str(value)) ?? 0;
 
+const appNavy = Color(0xff123e57);
+const appInk = Color(0xff172c3c);
+const appMuted = Color(0xff657381);
+const appCanvas = Color(0xfff5f6fa);
+
+void showMessage(BuildContext context, String message) {
+  if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text(message), behavior: SnackBarBehavior.floating));
+}
+
+class PageIntro extends StatelessWidget {
+  const PageIntro({required this.title, required this.subtitle, this.icon, super.key});
+  final String title;
+  final String subtitle;
+  final IconData? icon;
+  @override
+  Widget build(BuildContext context) => Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(title, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: appInk)),
+      const SizedBox(height: 3),
+      Text(subtitle, style: const TextStyle(fontSize: 12, color: appMuted)),
+    ])),
+    if (icon != null) Container(width: 42, height: 42,
+      decoration: BoxDecoration(color: const Color(0xffe5eef3), borderRadius: BorderRadius.circular(13)),
+      child: Icon(icon, color: appNavy, size: 22)),
+  ]);
+}
+
+class FormSection extends StatelessWidget {
+  const FormSection({required this.title, this.subtitle, super.key});
+  final String title;
+  final String? subtitle;
+  @override
+  Widget build(BuildContext context) => Padding(padding: const EdgeInsets.only(bottom: 12, top: 6),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: appInk)),
+      if (subtitle != null) Padding(padding: const EdgeInsets.only(top: 3),
+        child: Text(subtitle!, style: const TextStyle(fontSize: 12, color: appMuted))),
+    ]));
+}
+
+class StatusPill extends StatelessWidget {
+  const StatusPill({required this.label, this.color = appNavy, super.key});
+  final String label;
+  final Color color;
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+    decoration: BoxDecoration(color: color.withValues(alpha: 0.10),
+      borderRadius: BorderRadius.circular(20)),
+    child: Text(label, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w700)));
+}
+
 class PageSkeleton extends StatelessWidget {
   const PageSkeleton({this.embedded = false, super.key});
   final bool embedded;
@@ -38,9 +91,6 @@ class PageSkeleton extends StatelessWidget {
               Container(height: 12, width: 200, decoration: BoxDecoration(
                 color: const Color(0xffeef2f4), borderRadius: BorderRadius.circular(8))),
             ]))),
-      const Padding(padding: EdgeInsets.only(top: 12), child: Center(
-        child: SizedBox(width: 20, height: 20,
-          child: CircularProgressIndicator(strokeWidth: 2)))),
     ],
   );
 }
@@ -50,11 +100,11 @@ Future<void> perform(BuildContext context, Future<dynamic> Function() action,
   try {
     await action();
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(success)));
+      showMessage(context, success);
     }
   } catch (e) {
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      showMessage(context, e.toString());
     }
     rethrow;
   }
@@ -78,11 +128,14 @@ Widget field(String label, TextEditingController controller,
 
 class DataView extends StatefulWidget {
   const DataView({required this.api, required this.path, required this.item,
-    this.action, super.key});
+    this.action, this.title, this.subtitle, this.icon, super.key});
   final ErpApi api;
   final String path;
   final Widget Function(BuildContext, Json, VoidCallback) item;
   final Widget Function(BuildContext, VoidCallback)? action;
+  final String? title;
+  final String? subtitle;
+  final IconData? icon;
   @override
   State<DataView> createState() => _DataViewState();
 }
@@ -106,7 +159,12 @@ class _DataViewState extends State<DataView> {
       final entries = snapshot.data!;
       return RefreshIndicator(onRefresh: () async { reload(); await future; },
         child: ListView(padding: const EdgeInsets.all(16), children: [
+          if (widget.title != null) ...[
+            PageIntro(title: widget.title!, subtitle: widget.subtitle ?? '${entries.length} سجل', icon: widget.icon),
+            const SizedBox(height: 16),
+          ],
           if (widget.action != null) widget.action!(context, reload),
+          if (widget.action != null) const SizedBox(height: 14),
           if (entries.isEmpty) const Padding(padding: EdgeInsets.all(28),
             child: Center(child: Text('لا توجد بيانات بعد'))),
           ...entries.map((entry) => widget.item(context, entry, reload)),
@@ -128,11 +186,17 @@ class FormScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: Text(title)),
-    body: ListView(padding: const EdgeInsets.all(16), children: [
+    body: ListView(padding: const EdgeInsets.fromLTRB(16, 20, 16, 18), children: [
       ...children,
-      const SizedBox(height: 12),
-      FilledButton(onPressed: busy ? null : onSubmit,
-        child: Text(busy ? 'جارٍ الحفظ...' : 'حفظ')),
+      const SizedBox(height: 16),
     ]),
+    bottomNavigationBar: SafeArea(top: false, child: Container(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+      decoration: const BoxDecoration(color: Colors.white,
+        border: Border(top: BorderSide(color: Color(0xffe5eae6)))),
+      child: FilledButton(onPressed: busy ? null : onSubmit,
+        child: Padding(padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Text(busy ? 'جارٍ الحفظ...' : 'حفظ', style: const TextStyle(fontWeight: FontWeight.w700))))),
+    ),
   );
 }

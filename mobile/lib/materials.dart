@@ -10,6 +10,7 @@ class MaterialsPage extends StatelessWidget {
   final bool canWrite;
   @override
   Widget build(BuildContext context) => DataView(api: api, path: '/api/materials',
+    title: 'الخامات', subtitle: 'تعريف المواد وأسعارها وحد إعادة الشراء', icon: Icons.category_outlined,
     action: canWrite ? (context, reload) => FilledButton.icon(onPressed: () async {
       final saved = await openPage<bool>(context, MaterialForm(api: api));
       if (saved == true) reload();
@@ -47,6 +48,16 @@ class _MaterialFormState extends State<MaterialForm> {
   String? supplierId;
   String unit = 'قطعة';
   bool busy = false;
+  final newType = TextEditingController();
+  Future<void> addType() async {
+    if (newType.text.trim().isEmpty) { showMessage(context, 'اكتب اسم النوع الجديد'); return; }
+    try {
+      final response = await widget.api.post('/api/material-types', {'name': newType.text.trim()});
+      if (mounted) setState(() {
+        typeId = str(json(response['data'])['id']); types = load('/api/material-types'); newType.clear();
+      });
+    } catch (e) { if (mounted) showMessage(context, '$e'); }
+  }
   @override
   void initState() {
     super.initState();
@@ -59,10 +70,12 @@ class _MaterialFormState extends State<MaterialForm> {
     }
   }
   @override
-  void dispose() { name.dispose(); sku.dispose(); cost.dispose(); reorder.dispose(); capacity.dispose(); super.dispose(); }
+  void dispose() { name.dispose(); sku.dispose(); cost.dispose(); reorder.dispose(); capacity.dispose(); newType.dispose(); super.dispose(); }
 
   Future<void> submit() async {
-    if (name.text.trim().isEmpty || (widget.material == null && typeId == null)) return;
+    if (name.text.trim().isEmpty || typeId == null) {
+      showMessage(context, 'اكتب اسم الخامة واختر نوعها'); return;
+    }
     final defaultCost = cost.text.isEmpty ? null : double.tryParse(cost.text);
     final reorderLevel = reorder.text.isEmpty ? null : double.tryParse(reorder.text);
     final capacityMl = capacity.text.isEmpty ? null : double.tryParse(capacity.text);
@@ -71,7 +84,9 @@ class _MaterialFormState extends State<MaterialForm> {
       (capacity.text.isNotEmpty && capacityMl == null) ||
       (defaultCost != null && defaultCost < 0) ||
       (reorderLevel != null && reorderLevel < 0) ||
-      (capacityMl != null && capacityMl < 0)) return;
+      (capacityMl != null && capacityMl < 0)) {
+      showMessage(context, 'راجع القيم الرقمية المدخلة'); return;
+    }
     setState(() => busy = true);
     try {
       final fields = {'name': name.text.trim(), 'sku': sku.text.trim(),
@@ -95,12 +110,19 @@ class _MaterialFormState extends State<MaterialForm> {
   @override
   Widget build(BuildContext context) => FormScaffold(title: widget.material == null ? 'إضافة خامة' : 'تعديل الخامة',
     busy: busy, onSubmit: submit, children: [
+      const FormSection(title: 'بيانات الخامة', subtitle: 'حدد نوع الخامة والوحدة قبل الحفظ.'),
       FutureBuilder<List<Json>>(future: types, builder: (context, snapshot) => snapshot.hasData
         ? DropdownButtonFormField<String>(value: typeId,
           decoration: const InputDecoration(labelText: 'نوع الخامة'),
           items: snapshot.data!.map((entry) => DropdownMenuItem(value: str(entry['id']),
             child: Text(str(entry['name'])))).toList(),
-          onChanged: (value) => setState(() => typeId = value)) : const LinearProgressIndicator()),
+          onChanged: (value) => setState(() => typeId = value)) : snapshot.hasError
+          ? TextButton(onPressed: () => setState(() => types = load('/api/material-types')),
+            child: const Text('تعذر تحميل الأنواع · إعادة المحاولة'))
+          : const LinearProgressIndicator()),
+      Row(children: [Expanded(child: field('نوع جديد', newType)),
+        const SizedBox(width: 8), OutlinedButton.icon(onPressed: addType,
+          icon: const Icon(Icons.add), label: const Text('إضافة'))]),
       field('اسم الخامة', name), field('SKU', sku),
       DropdownButtonFormField<String>(value: unit,
         decoration: const InputDecoration(labelText: 'الوحدة'),
@@ -124,6 +146,7 @@ class SuppliersPage extends StatelessWidget {
   final ErpApi api; final bool canWrite;
   @override
   Widget build(BuildContext context) => DataView(api: api, path: '/api/suppliers',
+    title: 'الموردون', subtitle: 'بيانات التواصل مع موردي الخامات', icon: Icons.local_shipping_outlined,
     action: canWrite ? (context, reload) => FilledButton.icon(onPressed: () async {
       final saved = await openPage<bool>(context, SupplierForm(api: api));
       if (saved == true) reload();
@@ -153,7 +176,7 @@ class _SupplierFormState extends State<SupplierForm> {
   @override
   void dispose() { name.dispose(); phone.dispose(); email.dispose(); notes.dispose(); super.dispose(); }
   Future<void> save() async {
-    if (name.text.trim().isEmpty) return;
+    if (name.text.trim().isEmpty) { showMessage(context, 'اكتب اسم المورد'); return; }
     setState(() => busy = true);
     try {
       final data = {'name': name.text.trim(), 'phone': phone.text.trim(),

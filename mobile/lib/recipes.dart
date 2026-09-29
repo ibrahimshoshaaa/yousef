@@ -9,6 +9,7 @@ class RecipesPage extends StatelessWidget {
   final bool canWrite;
   @override
   Widget build(BuildContext context) => DataView(api: api, path: '/api/recipes',
+    title: 'الوصفات', subtitle: 'مكونات التصنيع ونسخ الوصفات', icon: Icons.science_outlined,
     action: canWrite ? (context, reload) => FilledButton.icon(onPressed: () async {
       final saved = await openPage<bool>(context, RecipeForm(api: api));
       if (saved == true) reload();
@@ -34,10 +35,14 @@ class _RecipeDetailState extends State<RecipeDetail> {
   @override
   Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: const Text('تفاصيل الوصفة')),
     body: FutureBuilder<dynamic>(future: record, builder: (context, snapshot) {
-      if (!snapshot.hasData) return const PageSkeleton();
+      if (!snapshot.hasData) return snapshot.hasError
+        ? Center(child: TextButton(onPressed: reload, child: const Text('تعذر التحميل · إعادة المحاولة')))
+        : const PageSkeleton();
       final recipe = json(snapshot.data['data']);
       final versions = (recipe['versions'] as List).map(json).toList();
       return ListView(padding: const EdgeInsets.all(16), children: [
+        PageIntro(title: str(recipe['name']), subtitle: 'النسخ ومكونات التصنيع', icon: Icons.science_outlined),
+        const SizedBox(height: 12),
         ListTile(title: Text(str(recipe['name'])), subtitle: Text('التكلفة ${str(recipe['cost'])} EGP')),
         for (final v in versions) Card(child: ExpansionTile(
           title: Text('النسخة v${v['version']} ${v['isCurrent'] == true ? '· الحالية' : ''}'),
@@ -86,10 +91,14 @@ class _RecipeFormState extends State<RecipeForm> {
   @override
   void dispose() { name.dispose(); for (final l in lines) { l.dispose(); } super.dispose(); }
   Future<void> submit() async {
-    final stock = await materials;
+    List<Json> stock;
+    try { stock = await materials; }
+    catch (e) { if (mounted) showMessage(context, 'تعذر تحميل الخامات: $e'); return; }
     if (lines.any((line) => line.materialId == null || (double.tryParse(line.quantity.text) ?? 0) <= 0) ||
         lines.map((line) => line.materialId).toSet().length != lines.length ||
-        (widget.recipeId == null && (variantId == null || name.text.trim().isEmpty))) return;
+        (widget.recipeId == null && (variantId == null || name.text.trim().isEmpty))) {
+      showMessage(context, 'اختر المنتج والخامات والكميات، وتأكد من عدم تكرار خامة'); return;
+    }
     setState(() => busy = true);
     final entries = lines.map((line) {
       final material = stock.firstWhere((m) => m['id'] == line.materialId);
@@ -120,7 +129,10 @@ class _RecipeFormState extends State<RecipeForm> {
               items: snapshot.data!.map((v) => DropdownMenuItem(value: str(v['id']),
                 child: Text(str(v['title'])))).toList(),
               onChanged: (value) => setState(() => variantId = value))
-              : const LinearProgressIndicator()),
+              : snapshot.hasError
+                ? TextButton(onPressed: () => setState(() => variants = rowsAsync('/api/mobile/catalog')),
+                    child: const Text('تعذر تحميل المنتجات · إعادة المحاولة'))
+                : const LinearProgressIndicator()),
           field('اسم الوصفة', name),
         ],
         if (materialSnapshot.hasError) Text('تعذر تحميل الخامات: ${materialSnapshot.error}'),

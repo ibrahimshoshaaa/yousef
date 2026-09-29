@@ -1,6 +1,4 @@
-import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
@@ -50,6 +48,8 @@ class ErpApi {
     }
   }
 
+  Future<void> clearSession() => _storage.delete(key: _tokenKey);
+
   Future<dynamic> _request(String method, String path,
       {Map<String, dynamic>? body}) async {
     final token = await _storage.read(key: _tokenKey);
@@ -59,9 +59,7 @@ class ErpApi {
       if (token != null) 'Authorization': 'Bearer $token',
     };
     final uri = Uri.parse('$_baseUrl$path');
-    late final http.Response response;
-    try {
-      response = await (method == 'GET'
+    final response = await (method == 'GET'
         ? _client.get(uri, headers: headers)
         : method == 'PATCH'
             ? _client.patch(uri, headers: headers, body: jsonEncode(body))
@@ -69,11 +67,6 @@ class ErpApi {
             ? _client.put(uri, headers: headers, body: jsonEncode(body))
             : _client.post(uri, headers: headers, body: jsonEncode(body)))
         .timeout(Duration(seconds: path.endsWith('/sync') ? 120 : 30));
-    } on SocketException {
-      throw const ApiException('تعذر الاتصال بالإنترنت. تحقق من الشبكة وحاول مرة أخرى.', 0);
-    } on TimeoutException {
-      throw const ApiException('استغرق الاتصال وقتًا طويلًا. حاول مرة أخرى.', 0);
-    }
     dynamic decoded;
     try {
       decoded = jsonDecode(utf8.decode(response.bodyBytes));
