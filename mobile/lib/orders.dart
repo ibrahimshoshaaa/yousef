@@ -36,6 +36,7 @@ class _OrdersPageState extends State<OrdersPage> {
 
   @override
   Widget build(BuildContext context) => FutureBuilder<dynamic>(future: result, builder: (context, snapshot) {
+    if (!snapshot.hasData && !snapshot.hasError) return const PageSkeleton();
     final body = <Widget>[
       Row(children: [
         const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start,
@@ -54,8 +55,6 @@ class _OrdersPageState extends State<OrdersPage> {
             onPressed: () { page = 1; reload(); }, icon: const Icon(Icons.arrow_back)))),
       const SizedBox(height: 14),
     ];
-    if (!snapshot.hasData && !snapshot.hasError) body.add(const Padding(
-      padding: EdgeInsets.symmetric(vertical: 24), child: LinearProgressIndicator()));
     if (snapshot.hasError) body.add(TextButton(onPressed: reload, child: Text('إعادة المحاولة: ${snapshot.error}')));
     if (snapshot.hasData) {
       final data = snapshot.data as Map;
