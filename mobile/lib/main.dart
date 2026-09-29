@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'api.dart';
+import 'account.dart';
 import 'finance.dart';
 import 'inventory.dart';
 import 'materials.dart';
@@ -44,7 +45,7 @@ class _PerfumeErpAppState extends State<PerfumeErpApp> {
             primary: const Color(0xff123e57),
             surface: Colors.white,
           ),
-          scaffoldBackgroundColor: const Color(0xfff5f6fa),
+          scaffoldBackgroundColor: appCanvas,
           appBarTheme: const AppBarTheme(
             backgroundColor: Color(0xff123e57),
             foregroundColor: Colors.white,
@@ -54,7 +55,8 @@ class _PerfumeErpAppState extends State<PerfumeErpApp> {
           ),
           cardTheme: CardThemeData(
             color: Colors.white,
-            elevation: 0,
+            elevation: 1,
+            shadowColor: const Color(0xffd7e0e7),
             margin: EdgeInsets.zero,
             shape: RoundedRectangleBorder(
               side: const BorderSide(color: Color(0xffe5eae6)),
@@ -79,6 +81,9 @@ class _PerfumeErpAppState extends State<PerfumeErpApp> {
               borderSide: const BorderSide(color: Color(0xffdce4de)),
             ),
           ),
+          navigationBarTheme: const NavigationBarThemeData(
+            backgroundColor: Colors.white,
+            indicatorColor: Color(0xffdceaf1)),
           useMaterial3: true,
         ),
         builder: (context, child) => Directionality(
@@ -197,12 +202,14 @@ class ErpHome extends StatefulWidget {
 
 class _ErpHomeState extends State<ErpHome> {
   int selected = 0;
+  int pageEpoch = 0;
   final scaffoldKey = GlobalKey<ScaffoldState>();
   late Future<dynamic> account = widget.api.get('/api/mobile/me');
 
   void switchTo(int index) {
     if (selected != index) setState(() => selected = index);
   }
+  void refreshAt(int index) => setState(() { selected = index; pageEpoch++; });
 
   @override
   Widget build(BuildContext context) {
@@ -238,7 +245,9 @@ class _ErpHomeState extends State<ErpHome> {
         6 => RecipesPage(api: widget.api, canWrite: manager),
         7 => ConsumptionPage(api: widget.api),
         8 => ReportsPage(api: widget.api),
-        9 => SettingsPage(api: widget.api, isOwner: owner),
+        9 => SettingsPage(api: widget.api, isOwner: owner,
+          onAccount: () => openPage(context, AccountPage(api: widget.api,
+            isOwner: owner, onPasswordChanged: widget.onLogout))),
         10 => ShopifyPage(api: widget.api),
         11 => MaterialsPage(api: widget.api, canWrite: manager),
         _ => SuppliersPage(api: widget.api, canWrite: manager),
@@ -280,6 +289,10 @@ class _ErpHomeState extends State<ErpHome> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 onTap: () { Navigator.pop(context); switchTo(i); }),
             )])),
+          ListTile(leading: const Icon(Icons.manage_accounts_outlined),
+            title: const Text('الحساب والأمان'),
+            onTap: () { Navigator.pop(context); openPage(context,
+              AccountPage(api: widget.api, isOwner: owner, onPasswordChanged: widget.onLogout)); }),
           const Divider(height: 1),
           Padding(padding: const EdgeInsets.all(12), child: ListTile(
             leading: const Icon(Icons.logout_rounded), title: const Text('تسجيل الخروج'),
@@ -287,7 +300,7 @@ class _ErpHomeState extends State<ErpHome> {
               finally { widget.onLogout(); } },
           )),
         ]))),
-        body: KeyedSubtree(key: ValueKey(selected), child: body),
+        body: KeyedSubtree(key: ValueKey('$selected-$pageEpoch'), child: body),
         bottomNavigationBar: NavigationBar(
           height: 68,
           backgroundColor: Colors.white,
@@ -298,7 +311,9 @@ class _ErpHomeState extends State<ErpHome> {
           onDestinationSelected: (index) {
             if (index == 2) {
               if (manager) {
-                openPage(context, NewOrderPage(api: widget.api));
+                openPage<bool>(context, NewOrderPage(api: widget.api)).then((created) {
+                  if (created == true && mounted) refreshAt(1);
+                });
               } else {
                 scaffoldKey.currentState?.openDrawer();
               }
@@ -344,6 +359,10 @@ class _DashboardState extends State<_Dashboard> {
   late Future<dynamic> report = load();
   Future<dynamic> load() => widget.api.get('/api/mobile/home?period=$period');
   void choose(String value) => setState(() { period = value; report = load(); });
+  Future<void> addAndRefresh(Widget page) async {
+    final saved = await openPage<bool>(context, page);
+    if (saved == true && mounted) setState(() => report = load());
+  }
   static const labels = {'today': 'اليوم', 'yesterday': 'أمس',
     '7d': 'آخر ٧ أيام', '30d': 'آخر ٣٠ يوم', 'month': 'هذا الشهر',
     'lastMonth': 'الشهر الماضي'};
@@ -399,11 +418,11 @@ class _DashboardState extends State<_Dashboard> {
       final name = str(widget.user['name']).trim();
       final quick = <(String, IconData, VoidCallback)>[
         if (widget.manager) ('منتج جديد', Icons.add_box_outlined,
-          () => openPage(context, SimpleProductPage(api: widget.api))),
+          () => addAndRefresh(SimpleProductPage(api: widget.api))),
         if (widget.manager) ('إضافة مخزون', Icons.add_home_work_outlined,
-          () => openPage(context, StockForm(api: widget.api))),
+          () => addAndRefresh(StockForm(api: widget.api))),
         if (widget.manager) ('إضافة مصروف', Icons.add_card_outlined,
-          () => openPage(context, ExpenseForm(api: widget.api))),
+          () => addAndRefresh(ExpenseForm(api: widget.api))),
         ('الطلبات', Icons.receipt_long_outlined, () => widget.onSelect(1)),
         ('المخزون', Icons.warehouse_outlined, () => widget.onSelect(2)),
         if (widget.manager) ('المرتجعات', Icons.assignment_return_outlined,
@@ -469,7 +488,7 @@ class _DashboardState extends State<_Dashboard> {
         const SizedBox(height: 10),
         if (widget.manager) Padding(padding: const EdgeInsets.only(bottom: 10),
           child: FilledButton.icon(
-            onPressed: () => openPage(context, NewOrderPage(api: widget.api)),
+            onPressed: () => addAndRefresh(NewOrderPage(api: widget.api)),
             icon: const Icon(Icons.add_shopping_cart_outlined),
             label: const Padding(padding: EdgeInsets.symmetric(vertical: 9),
               child: Text('تسجيل طلب جديد', style: TextStyle(
