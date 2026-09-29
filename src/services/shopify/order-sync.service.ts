@@ -47,12 +47,14 @@ export async function upsertShopifyOrder(storeId: string, node: ShopifyOrderNode
   const contactAvailable = "shippingAddress" in node || "billingAddress" in node;
 
   const order = await db.$transaction(async (tx) => {
+    const existing = await tx.order.findUnique({ where: { storeId_shopifyId: { storeId, shopifyId: node.id } }, select: { shopifyStage: true } });
     const upserted = await tx.order.upsert({
       where: { storeId_shopifyId: { storeId, shopifyId: node.id } },
       update: {
         orderNumber: node.name,
         financialStatus: node.displayFinancialStatus,
         fulfillmentStatus: node.displayFulfillmentStatus,
+        ...(node.displayFulfillmentStatus === "FULFILLED" && existing?.shopifyStage !== "DELIVERED" ? { shopifyStage: "SHIPPING" } : {}),
         currency: node.currencyCode,
         subtotal,
         shipping,
@@ -70,6 +72,7 @@ export async function upsertShopifyOrder(storeId: string, node: ShopifyOrderNode
         orderNumber: node.name,
         financialStatus: node.displayFinancialStatus,
         fulfillmentStatus: node.displayFulfillmentStatus,
+        ...(node.displayFulfillmentStatus === "FULFILLED" ? { shopifyStage: "SHIPPING" } : {}),
         currency: node.currencyCode,
         subtotal,
         shipping,
