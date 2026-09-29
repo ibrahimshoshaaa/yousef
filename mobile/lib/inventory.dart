@@ -221,7 +221,7 @@ class _MaterialDetailState extends State<MaterialDetail> {
       ],
       const SizedBox(height: 20), Text('حركة المخزون', style: Theme.of(context).textTheme.titleLarge),
       FutureBuilder<dynamic>(future: transactions, builder: (context, snapshot) {
-        if (!snapshot.hasData) return const LinearProgressIndicator();
+        if (!snapshot.hasData) return const PageSkeleton(embedded: true);
         final data = (snapshot.data as Map)['data'];
         return Column(children: [for (final tx in (data as List).map(json))
           ListTile(title: Text(str(tx['type'])),
