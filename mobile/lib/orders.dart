@@ -38,25 +38,34 @@ class _OrdersPageState extends State<OrdersPage> {
   Widget build(BuildContext context) => FutureBuilder<dynamic>(future: result, builder: (context, snapshot) {
     if (!snapshot.hasData && !snapshot.hasError) return const PageSkeleton();
     final body = <Widget>[
-      Row(children: [
-        const Expanded(child: PageIntro(title: 'الطلبات',
-          subtitle: 'تابع التجهيز والشحن والتحصيل', icon: Icons.receipt_long_outlined)),
-        if (widget.canWrite) FilledButton.icon(onPressed: newOrder,
-          icon: const Icon(Icons.add, size: 19), label: const Text('طلب جديد')),
-      ]),
-      const SizedBox(height: 18),
-      TextField(controller: search,
+      const PageIntro(title: 'الطلبات',
+        subtitle: 'تابع التجهيز والشحن والتحصيل', icon: Icons.receipt_long_outlined),
+      const SizedBox(height: 20),
+      if (widget.canWrite) ...[
+        SizedBox(width: double.infinity, height: 52,
+          child: FilledButton.icon(onPressed: newOrder,
+            icon: const Icon(Icons.add_circle_outline, size: 22),
+            label: const Text('طلب جديد'))),
+        const SizedBox(height: 18),
+      ],
+      TextField(controller: search, textInputAction: TextInputAction.search,
         onSubmitted: (_) { page = 1; reload(); },
-        decoration: InputDecoration(hintText: 'رقم الطلب أو اسم العميل',
+        decoration: InputDecoration(hintText: 'ابحث برقم الطلب أو اسم العميل',
           prefixIcon: const Icon(Icons.search),
           suffixIcon: IconButton(tooltip: 'بحث',
             onPressed: () { page = 1; reload(); }, icon: const Icon(Icons.arrow_back)))),
-      const SizedBox(height: 14),
+      const SizedBox(height: 22),
     ];
     if (snapshot.hasError) body.add(TextButton(onPressed: reload, child: Text('إعادة المحاولة: ${snapshot.error}')));
     if (snapshot.hasData) {
       final data = snapshot.data as Map;
       final orders = (data['data'] as List).map(json);
+      body.add(Padding(padding: const EdgeInsets.only(bottom: 14),
+        child: Row(children: [
+          const Expanded(child: Text('سجل الطلبات', style: TextStyle(
+            fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xff193443)))),
+          Text('${data['count']} طلب', style: const TextStyle(color: Color(0xff718089))),
+        ])));
       if (orders.isEmpty) body.add(const Padding(padding: EdgeInsets.all(32),
         child: Center(child: Text('لا توجد طلبات بهذا البحث'))));
       body.addAll(orders.map((o) {
@@ -70,44 +79,72 @@ class _OrdersPageState extends State<OrdersPage> {
         final badgeText = isReturned ? const Color(0xffa33146) :
           isDelivered ? const Color(0xff24704a) : const Color(0xff8c682c);
         final number = str(o['orderNumber']).replaceFirst(RegExp(r'^#+'), '');
-        return Padding(padding: const EdgeInsets.only(bottom: 10),
-          child: Card(child: ExpansionTile(
-        tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
-        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+        final currency = str(o['currency']);
+        final customer = str(o['customerRef']).trim();
+        final items = (o['items'] as List).map(json).toList();
+        return Padding(padding: const EdgeInsets.only(bottom: 14),
+          child: Card(clipBehavior: Clip.antiAlias, child: ExpansionTile(
+        tilePadding: const EdgeInsets.fromLTRB(18, 12, 18, 12),
+        childrenPadding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         collapsedShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(children: [
-          Expanded(child: Text('طلب #$number', textDirection: TextDirection.rtl,
-            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800))),
-          Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Expanded(child: Text('طلب #$number', textDirection: TextDirection.rtl,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800,
+                color: Color(0xff193443)))),
+            Container(padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
             decoration: BoxDecoration(color: badgeColor,
               borderRadius: BorderRadius.circular(30)),
-            child: Text(stage, style: TextStyle(fontSize: 11,
-              color: badgeText, fontWeight: FontWeight.w700))),
-        ]),
-        subtitle: Padding(padding: const EdgeInsets.only(top: 8),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(str(o['customerRef']).isEmpty ? 'عميل غير محدد' : str(o['customerRef']),
+              child: Text(stage, style: TextStyle(fontSize: 12,
+                color: badgeText, fontWeight: FontWeight.w700))),
+          ]),
+          const SizedBox(height: 12),
+          Text(customer.isEmpty ? 'عميل غير محدد' : customer,
               maxLines: 1, overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Color(0xff65746c), fontSize: 13)),
-            const SizedBox(height: 5),
-            Text('${str(o['total'])} ${str(o['currency'])} · ${(o['items'] as List).length} صنف',
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700,
-                color: Color(0xff173d34))),
-          ])),
+              style: const TextStyle(color: Color(0xff65747d), fontSize: 14)),
+          const SizedBox(height: 12),
+          Row(children: [
+            Text('${str(o['total'])} $currency', style: const TextStyle(
+              fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xff143e54))),
+            const SizedBox(width: 10),
+            Text('· ${items.length} صنف', style: const TextStyle(
+              fontSize: 13, color: Color(0xff718089))),
+          ]),
+        ]),
         children: [
-          const Divider(),
-          ListTile(title: Text(o['manualStatus'] == null ? 'طلب Shopify' : 'طلب يدوي'),
-            subtitle: Text('الدفع: ${paymentStages[str(o['financialStatus'])] ?? str(o['financialStatus'])}')),
-          ListTile(title: const Text('بيانات العميل'), subtitle: Text('${str(o['customerRef'])}\n${str(o['customerPhone'])}\n${str(o['customerAddress'])}')),
-          ListTile(title: const Text('الديبوزت'), subtitle: Text('${str(o['depositAmount'])} ${str(o['currency'])}')),
-          ...((o['items'] as List).map(json)).map((item) => ListTile(
-            title: Text(str(item['title'])),
-            subtitle: Text('العدد: ${str(item['quantity'])} · ${str(item['consumptionStatus'])}'))),
-          TextButton(onPressed: () => openPage(context, Scaffold(
+          const Divider(height: 24),
+          _detailRow(Icons.storefront_outlined, 'المصدر',
+            o['manualStatus'] == null ? 'Shopify' : 'طلب يدوي'),
+          _detailRow(Icons.payments_outlined, 'الدفع',
+            paymentStages[str(o['financialStatus'])] ?? str(o['financialStatus'])),
+          if (str(o['depositAmount']).isNotEmpty)
+            _detailRow(Icons.account_balance_wallet_outlined, 'الديبوزت',
+              '${str(o['depositAmount'])} $currency'),
+          const SizedBox(height: 14),
+          _sectionTitle('بيانات العميل'),
+          _detailRow(Icons.person_outline, 'الاسم', customer.isEmpty ? 'غير متاح' : customer),
+          if (str(o['customerPhone']).trim().isNotEmpty)
+            _detailRow(Icons.phone_outlined, 'الهاتف', str(o['customerPhone'])),
+          if (str(o['customerAddress']).trim().isNotEmpty)
+            _detailRow(Icons.location_on_outlined, 'العنوان', str(o['customerAddress'])),
+          const SizedBox(height: 14),
+          _sectionTitle('الأصناف (${items.length})'),
+          ...items.map((item) => Padding(padding: const EdgeInsets.symmetric(vertical: 7),
+            child: Row(children: [
+              Expanded(child: Text(str(item['title']), style: const TextStyle(
+                fontWeight: FontWeight.w600))),
+              Text('× ${str(item['quantity'])}', style: const TextStyle(
+                fontWeight: FontWeight.w800, color: Color(0xff143e54))),
+            ]))),
+          const SizedBox(height: 12),
+          SizedBox(width: double.infinity, child: OutlinedButton.icon(
+            onPressed: () => openPage(context, Scaffold(
             appBar: AppBar(title: Text('استهلاك طلب #${str(o['orderNumber'])}')),
             body: ConsumptionPage(api: widget.api, orderId: str(o['id'])))),
-            child: const Text('عرض حركة استهلاك الخامات')),
+            icon: const Icon(Icons.science_outlined),
+            label: const Text('عرض حركة استهلاك الخامات'))),
+          if (widget.canWrite) const SizedBox(height: 10),
           if (widget.canWrite && o['manualStatus'] != null) ...[
             if (o['manualStatus'] == 'NEW') action(o, 'PREPARED', 'تم التجهيز وخصم الخامات'),
             if (o['manualStatus'] == 'PREPARED') action(o, 'SHIPPING', 'جاري الشحن'),
@@ -137,6 +174,21 @@ class _OrdersPageState extends State<OrdersPage> {
     return RefreshIndicator(onRefresh: () async { reload(); await result; },
       child: ListView(padding: const EdgeInsets.fromLTRB(16, 16, 16, 24), children: body));
   });
+
+  Widget _sectionTitle(String title) => Padding(
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Align(alignment: AlignmentDirectional.centerStart,
+      child: Text(title, style: const TextStyle(fontSize: 15,
+        fontWeight: FontWeight.w800, color: Color(0xff193443)))));
+
+  Widget _detailRow(IconData icon, String label, String value) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 6),
+    child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Icon(icon, size: 19, color: const Color(0xff638095)),
+      const SizedBox(width: 8),
+      Text('$label: ', style: const TextStyle(color: Color(0xff718089))),
+      Expanded(child: Text(value, style: const TextStyle(fontWeight: FontWeight.w600))),
+    ]));
 
   Widget action(Json order, String status, String label, {bool destructive = false}) =>
     ListTile(leading: Icon(destructive ? Icons.undo : Icons.check_circle_outline),
