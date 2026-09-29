@@ -19,6 +19,7 @@ async function freePort() {
 test('mobile login, tenant access, and revocable logout through real HTTP routes',
   { timeout: 90_000 }, async () => {
     const store = await db.store.create({ data: { name: 'Mobile HTTP integration' } });
+    const otherStore = await db.store.create({ data: { name: 'Other tenant' } });
     const email = `mobile-ci-${store.id}@example.com`;
     const password = 'temporary-mobile-test-password';
     const port = await freePort();
@@ -56,6 +57,32 @@ test('mobile login, tenant access, and revocable logout through real HTTP routes
       const orders = await fetch(`${url}/api/mobile/orders`, { headers });
       assert.equal(orders.status, 200);
       assert.equal((await orders.json()).count, 0);
+      const category = await db.expenseCategory.create({ data: { storeId: store.id, name: 'Return Cost' } });
+      const order = await db.order.create({ data: {
+        storeId: store.id, orderNumber: 'M-CI-123', currency: 'EGP', occurredAt: new Date(),
+        customerRef: 'Test Customer', customerPhone: '01000000000', customerAddress: 'Cairo',
+        total: 450, items: { create: { title: 'Oud 30 ml', quantity: 1 } },
+      }, include: { items: true } });
+      const returned = await db.return.create({ data: {
+        storeId: store.id, orderId: order.id, status: 'PROCESSED', returnCost: 95,
+        items: { create: { orderItemId: order.items[0].id, quantity: 1, condition: 'GOOD' } },
+      } });
+      const expense = await db.expense.create({ data: {
+        storeId: store.id, categoryId: category.id, returnId: returned.id,
+        amount: 95, currency: 'EGP', date: new Date(), description: `Return for order ${order.id}`,
+      } });
+      const expenseDetails = await fetch(`${url}/api/expenses/${expense.id}`, { headers });
+      assert.equal(expenseDetails.status, 200);
+      const linked = (await expenseDetails.json()).data;
+      assert.equal(linked.return.order.orderNumber, 'M-CI-123');
+      assert.equal(linked.return.order.customerRef, 'Test Customer');
+      assert.equal(linked.return.items[0].orderItem.title, 'Oud 30 ml');
+      const foreignCategory = await db.expenseCategory.create({ data: { storeId: otherStore.id, name: 'Other' } });
+      const foreignExpense = await db.expense.create({ data: {
+        storeId: otherStore.id, categoryId: foreignCategory.id,
+        amount: 10, currency: 'EGP', date: new Date(),
+      } });
+      assert.equal((await fetch(`${url}/api/expenses/${foreignExpense.id}`, { headers })).status, 404);
       const ownerEmail = `second-${store.id}@example.com`;
       const ownerPassword = 'another-temporary-owner-password';
       const createOwner = async currentPassword => fetch(`${url}/api/mobile/account/users`, {
@@ -97,6 +124,7 @@ test('mobile login, tenant access, and revocable logout through real HTTP routes
       child.kill('SIGTERM');
       await delay(100);
       await db.store.delete({ where: { id: store.id } });
+      await db.store.delete({ where: { id: otherStore.id } });
       await db.$disconnect();
     }
   });
