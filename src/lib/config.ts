@@ -31,6 +31,12 @@ const shopifyEnvSchema = z.object({
     .min(1, "SHOPIFY_TOKEN_ENCRYPTION_KEY is not set"),
 });
 
+export const SHOPIFY_FULFILLMENT_SCOPES = [
+  "read_merchant_managed_fulfillment_orders",
+  "write_merchant_managed_fulfillment_orders",
+  "write_fulfillments",
+] as const;
+
 export type ShopifyConfig = {
   apiKey: string;
   apiSecret: string;
@@ -55,7 +61,7 @@ export function getShopifyConfig(): ShopifyConfig {
     // Falls back to the app's client secret — Shopify signs webhook
     // payloads with it unless a distinct signing secret was issued.
     webhookSecret: parsed.SHOPIFY_WEBHOOK_SECRET || parsed.SHOPIFY_API_SECRET,
-    scopes: parsed.SHOPIFY_SCOPES.split(",").map((s) => s.trim()).filter(Boolean),
+    scopes: [...new Set([...parsed.SHOPIFY_SCOPES.split(",").map((s) => s.trim()).filter(Boolean), ...SHOPIFY_FULFILLMENT_SCOPES])],
     apiVersion: parsed.SHOPIFY_API_VERSION,
     tokenEncryptionKey: parsed.SHOPIFY_TOKEN_ENCRYPTION_KEY,
   };
