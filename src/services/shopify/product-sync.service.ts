@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import type { ShopifyProductNode } from "@/lib/shopify/types";
 import { getClientForStore } from "@/services/shopify/connection.service";
+import { activeProductStatus } from "@/lib/active-product";
 
 /**
  * Products/variants are Shopify-owned data (spec §9) — we keep a local
@@ -78,7 +79,7 @@ export async function syncAllProducts(storeId: string): Promise<{ count: number 
   // Reconcile deletions only after every page has been fetched successfully.
   // Never remove order items or recipe versions used by past sales.
   const linked = await db.product.findMany({
-    where: { storeId, shopifyId: { not: null }, NOT: { status: "ARCHIVED" } },
+    where: { storeId, shopifyId: { not: null }, ...activeProductStatus },
     select: { id: true, shopifyId: true },
   });
   const missing = linked.filter(product => product.shopifyId && !seen.has(product.shopifyId));

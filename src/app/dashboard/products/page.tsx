@@ -2,12 +2,13 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth-helpers";
 import { can } from "@/lib/rbac";
+import { activeProductStatus } from "@/lib/active-product";
 
 export default async function ProductsPage() {
   const session = await requireAuth();
   if (!can(session.role, "products.read")) throw new Error("Forbidden");
   const products = await db.product.findMany({
-    where: { storeId: session.storeId, NOT: { status: "ARCHIVED" } },
+    where: { storeId: session.storeId, ...activeProductStatus },
     include: { variants: { where: { active: true }, include: { recipes: { include: { versions: { where: { isCurrent: true }, include: { items: { include: { material: { select: { name: true, unit: true } } } } } } } } } } },
     orderBy: { title: "asc" },
   });
