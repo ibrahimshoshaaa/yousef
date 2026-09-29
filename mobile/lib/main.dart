@@ -283,7 +283,7 @@ class _ErpHomeState extends State<ErpHome> {
           Padding(padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
             child: Row(children: [
               const CircleAvatar(radius: 22, backgroundColor: Color(0xff191735),
-                child: Image(image: AssetImage('assets/auraic-icon.png'))),
+                child: Image(image: AssetImage('assets/auraic-icon.jpg'))),
               const SizedBox(width: 12),
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start,
                 children: [const Text('Auraic',
