@@ -20,7 +20,7 @@ export async function upsertShopifyProduct(storeId: string, node: ShopifyProduct
       ? await tx.product.update({ where: { id: local.id }, data: { ...details, shopifyId: node.id } })
       : await tx.product.upsert({
         where: { storeId_shopifyId: { storeId, shopifyId: node.id } },
-        update: details,
+        update: { ...details, ...(existing?.status === "ARCHIVED" ? { status: "ARCHIVED" } : {}) },
         create: {
           storeId,
           shopifyId: node.id,
