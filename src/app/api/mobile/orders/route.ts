@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     const where = { storeId: session.storeId, ...(search ? { OR: [{ orderNumber: { contains: search, mode: "insensitive" as const } }, { customerRef: { contains: search, mode: "insensitive" as const } }] } : {}) };
     const [orders, count] = await Promise.all([
       db.order.findMany({ where, orderBy: [{ occurredAt: "desc" }, { id: "desc" }], skip: (page - 1) * 25, take: 25, select: {
-        id: true, orderNumber: true, occurredAt: true, financialStatus: true, fulfillmentStatus: true, manualStatus: true,
+        id: true, orderNumber: true, occurredAt: true, financialStatus: true, fulfillmentStatus: true, manualStatus: true, shopifyStage: true, shopifyId: true,
         currency: true, total: true, netSales: true, depositAmount: true, customerRef: true, customerPhone: true, customerAddress: true,
         items: { select: { id: true, title: true, quantity: true, finalLinePrice: true, consumptionStatus: true } },
       } }),

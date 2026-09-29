@@ -42,6 +42,51 @@ export class ShopifyClient {
     return `https://${this.shopDomain}/admin/api/${this.apiVersion}/graphql.json`;
   }
 
+  async fetchFulfillmentState(id: string) {
+    const data = await this.graphql<{ order: null | {
+      displayFulfillmentStatus: string;
+      fulfillmentOrders: { nodes: { id: string; status: string }[]; pageInfo: { hasNextPage: boolean } };
+      fulfillments: { id: string; status: string; displayStatus: string; deliveredAt: string | null }[];
+    } }>(`query FulfillmentState($id: ID!) {
+      order(id: $id) {
+        displayFulfillmentStatus
+        fulfillmentOrders(first: 100) { nodes { id status } pageInfo { hasNextPage } }
+        fulfillments(first: 100) { id status displayStatus deliveredAt }
+      }
+    }`, { id });
+    return data.order;
+  }
+
+  async createFulfillment(fulfillmentOrderId: string) {
+    const data = await this.graphql<{ fulfillmentCreate: {
+      fulfillment: { id: string } | null;
+      userErrors: { message: string }[];
+    } }>(`mutation CreateFulfillment($fulfillment: FulfillmentInput!) {
+      fulfillmentCreate(fulfillment: $fulfillment) {
+        fulfillment { id }
+        userErrors { message }
+      }
+    }`, { fulfillment: { lineItemsByFulfillmentOrder: [{ fulfillmentOrderId }], notifyCustomer: false } });
+    const result = data.fulfillmentCreate;
+    if (result.userErrors.length || !result.fulfillment) throw new ShopifyApiError(result.userErrors.map(e => e.message).join("; ") || "تعذر إنشاء شحنة Shopify");
+    return result.fulfillment;
+  }
+
+  async createDeliveryEvent(fulfillmentId: string) {
+    const data = await this.graphql<{ fulfillmentEventCreate: {
+      fulfillmentEvent: { id: string } | null;
+      userErrors: { message: string }[];
+    } }>(`mutation MarkDelivered($fulfillmentEvent: FulfillmentEventInput!) {
+      fulfillmentEventCreate(fulfillmentEvent: $fulfillmentEvent) {
+        fulfillmentEvent { id }
+        userErrors { message }
+      }
+    }`, { fulfillmentEvent: { fulfillmentId, status: "DELIVERED" } });
+    const result = data.fulfillmentEventCreate;
+    if (result.userErrors.length || !result.fulfillmentEvent) throw new ShopifyApiError(result.userErrors.map(e => e.message).join("; ") || "تعذر تسجيل التسليم في Shopify");
+    return result.fulfillmentEvent;
+  }
+
   /** Contact access depends on the app's protected customer data permissions. */
   private async orderQuery<T>(query: string, variables: Record<string, unknown>): Promise<T> {
     try {
