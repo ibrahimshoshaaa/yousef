@@ -20,3 +20,14 @@ body {
 }
 
 button, input, select, textarea { font: inherit; }
+
+@keyframes auraicFadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes auraicBreathe { 50% { transform: scale(1.035); opacity: .8; } }
+@keyframes auraicSlide { from { transform: translateX(110%); } to { transform: translateX(-110%); } }
+.auraic-login-enter { animation: auraicFadeIn .25s ease-out; }
+.auraic-login-logo { animation: auraicBreathe 1.5s ease-in-out infinite; }
+.auraic-login-progress { animation: auraicSlide 1.2s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .auraic-login-enter, .auraic-login-logo, .auraic-login-progress { animation: none; }
+}
