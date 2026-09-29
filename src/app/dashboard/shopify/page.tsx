@@ -5,6 +5,7 @@ import { getConnectionStatus } from "@/services/shopify/connection.service";
 import { ConnectShopifyForm } from "@/components/shopify/ConnectShopifyForm";
 import { SyncActions, RetryWebhookButton } from "@/components/shopify/SyncActions";
 import { SHOPIFY_FULFILLMENT_SCOPES } from "@/lib/config";
+import { hasShopifyScope } from "@/lib/shopify/scopes";
 
 async function getDevStoreId() {
   const session = await requireAuth();
@@ -57,7 +58,7 @@ async function ShopifyStatus({
 
   const isConnected = connection?.status === "CONNECTED";
   const grantedScopes = new Set(connection?.scope?.split(",").map(scope => scope.trim()) ?? []);
-  const missingFulfillmentScopes = SHOPIFY_FULFILLMENT_SCOPES.filter(scope => !grantedScopes.has(scope));
+  const missingFulfillmentScopes = SHOPIFY_FULFILLMENT_SCOPES.filter(scope => !hasShopifyScope(grantedScopes, scope));
   const requestedScopes = [...new Set([...(process.env.SHOPIFY_SCOPES?.split(",").map(scope => scope.trim()).filter(Boolean) ?? []), ...SHOPIFY_FULFILLMENT_SCOPES])];
 
   return (
