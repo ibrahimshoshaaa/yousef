@@ -23,16 +23,48 @@ class PerfumeErpApp extends StatefulWidget {
   State<PerfumeErpApp> createState() => _PerfumeErpAppState();
 }
 
-class _PerfumeErpAppState extends State<PerfumeErpApp> {
+class _PerfumeErpAppState extends State<PerfumeErpApp> with WidgetsBindingObserver {
   final api = ErpApi();
   bool? signedIn;
+  bool wasBackgrounded = false;
+  bool showResumeSplash = false;
+  int splashGeneration = 0;
 
   @override
   void initState() {
     super.initState();
-    api.hasSession.then((value) {
-      if (mounted) setState(() => signedIn = value);
-    });
+    WidgetsBinding.instance.addObserver(this);
+    _restoreSession();
+  }
+
+  Future<void> _restoreSession() async {
+    final session = api.hasSession;
+    await Future<void>.delayed(const Duration(milliseconds: 1300));
+    final value = await session;
+    if (mounted) setState(() => signedIn = value);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.hidden) {
+      wasBackgrounded = true;
+    } else if (state == AppLifecycleState.resumed && wasBackgrounded) {
+      wasBackgrounded = false;
+      if (signedIn == null) return;
+      final generation = ++splashGeneration;
+      setState(() => showResumeSplash = true);
+      Future<void>.delayed(const Duration(milliseconds: 1100), () {
+        if (mounted && generation == splashGeneration) {
+          setState(() => showResumeSplash = false);
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
   }
 
   @override
@@ -88,7 +120,10 @@ class _PerfumeErpAppState extends State<PerfumeErpApp> {
         ),
         builder: (context, child) => Directionality(
           textDirection: TextDirection.rtl,
-          child: child!,
+          child: Stack(children: [
+            child!,
+            if (showResumeSplash) const Positioned.fill(child: AuraicSplash()),
+          ]),
         ),
         home: signedIn == null
             ? const AuraicSplash()
@@ -283,7 +318,7 @@ class _ErpHomeState extends State<ErpHome> {
           Padding(padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
             child: Row(children: [
               const CircleAvatar(radius: 22, backgroundColor: Color(0xff191735),
-                child: Image(image: AssetImage('assets/auraic-icon.jpg'))),
+                child: Image(image: AssetImage('assets/auraic-icon.png'))),
               const SizedBox(width: 12),
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start,
                 children: [const Text('Auraic',
@@ -381,37 +416,41 @@ class _DashboardState extends State<_Dashboard> {
     'lastMonth': 'الشهر الماضي'};
 
   Widget metric(String label, dynamic value, IconData icon, String currency,
-      {bool money = false}) => Card(child: Padding(
-    padding: const EdgeInsets.all(14),
+      {bool money = false}) => Card(child: SizedBox(height: 112, child: Padding(
+    padding: const EdgeInsets.all(15),
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Row(children: [Icon(icon, color: const Color(0xff638098), size: 18),
-        const SizedBox(width: 6),
+      Row(children: [Icon(icon, color: const Color(0xff5b5786), size: 19),
+        const SizedBox(width: 7),
         Expanded(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontSize: 12, color: Color(0xff657381))))]),
-      const SizedBox(height: 12),
-      Text(str(value), maxLines: 1,
-        overflow: TextOverflow.ellipsis, textDirection: TextDirection.ltr,
-        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800,
-          color: Color(0xff152b3c))),
-      if (money) Text(currency, style: const TextStyle(
-        fontSize: 11, color: Color(0xff788993))),
+          style: const TextStyle(fontSize: 12, color: Color(0xff6d7481))))]),
+      const Spacer(),
+      Row(textDirection: TextDirection.ltr, crossAxisAlignment: CrossAxisAlignment.end,
+        children: [Flexible(child: Text(str(value), maxLines: 1,
+          overflow: TextOverflow.ellipsis, textDirection: TextDirection.ltr,
+          style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w800,
+            color: Color(0xff191735)))),
+          if (money) Padding(padding: const EdgeInsets.only(left: 5, bottom: 3),
+            child: Text(currency, style: const TextStyle(fontSize: 11,
+              color: Color(0xff858998)))),
+        ]),
     ]),
-  ));
+  )));
 
   Widget shortcut(String title, IconData icon, VoidCallback onTap) =>
     InkWell(onTap: onTap, borderRadius: BorderRadius.circular(16),
-      child: Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 17),
+      child: Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 13),
         decoration: BoxDecoration(color: Colors.white,
           border: Border.all(color: const Color(0xffe5eae6)),
           borderRadius: BorderRadius.circular(16)),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Container(width: 42, height: 42,
-            decoration: BoxDecoration(color: const Color(0xffedf3f7),
+            decoration: BoxDecoration(color: const Color(0xfff0eef9),
               borderRadius: BorderRadius.circular(12)),
-            child: Icon(icon, size: 21, color: const Color(0xff123e57))),
+            child: Icon(icon, size: 21, color: const Color(0xff191735))),
           const SizedBox(height: 10),
-          Text(title, maxLines: 1, overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+          Text(title, maxLines: 2, textAlign: TextAlign.center,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
         ])));
 
   @override
@@ -442,7 +481,6 @@ class _DashboardState extends State<_Dashboard> {
           () => widget.onSelect(5)),
       ];
       final metrics = <(String, dynamic, IconData, bool)>[
-        ('إجمالي المبيعات', sales['gross'], Icons.trending_up, true),
         ('صافي المبيعات', sales['net'], Icons.show_chart, true),
         ('الدفعات المستلمة', cash['received'], Icons.payments_outlined, true),
         ('الطلبات', sales['orders'], Icons.receipt_long_outlined, false),
@@ -465,29 +503,42 @@ class _DashboardState extends State<_Dashboard> {
         const Text('ملخص شغلك في الفترة المحددة',
           style: TextStyle(color: Color(0xff718079), fontSize: 12)),
         const SizedBox(height: 15),
-        Row(children: [
-          for (final key in const ['today', 'yesterday', '7d'])
-            Expanded(child: Padding(padding: const EdgeInsetsDirectional.only(end: 6),
-              child: ChoiceChip(label: Text(labels[key]!, maxLines: 1,
-                style: const TextStyle(fontSize: 12)),
-                selected: period == key,
-                onSelected: (_) => choose(key)))),
-          PopupMenuButton<String>(tooltip: 'فترات أخرى',
-            onSelected: choose,
-            itemBuilder: (_) => [for (final key in const ['30d', 'month', 'lastMonth'])
-              PopupMenuItem(value: key, child: Text(labels[key]!))],
-            child: Container(padding: const EdgeInsets.all(11),
-              decoration: BoxDecoration(
-                color: !const ['today', 'yesterday', '7d'].contains(period)
-                  ? const Color(0xffe2efe8) : Colors.white,
-                border: Border.all(color: const Color(0xffdce4de)),
-                borderRadius: BorderRadius.circular(12)),
-              child: const Icon(Icons.tune, size: 20))),
-        ]),
-        if (!const ['today', 'yesterday', '7d'].contains(period))
-          Padding(padding: const EdgeInsets.only(top: 8), child: Text(labels[period]!,
-            style: const TextStyle(color: Color(0xff173d34), fontWeight: FontWeight.w600))),
+        SizedBox(height: 48, child: ListView(scrollDirection: Axis.horizontal,
+          children: [for (final key in labels.keys) Padding(
+            padding: const EdgeInsetsDirectional.only(end: 8),
+            child: ChoiceChip(label: Text(labels[key]!,
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700,
+                color: period == key ? Colors.white : const Color(0xff191735))),
+              showCheckmark: false,
+              selectedColor: const Color(0xff191735),
+              backgroundColor: Colors.white,
+              side: const BorderSide(color: Color(0xffdedfe8)),
+              selected: period == key, onSelected: (_) => choose(key)))])),
         const SizedBox(height: 16),
+        Container(padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(color: const Color(0xff191735),
+            borderRadius: BorderRadius.circular(24)),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [const Icon(Icons.trending_up_rounded,
+              color: Color(0xffffe8a1), size: 22), const SizedBox(width: 8),
+              const Text('إجمالي المبيعات', style: TextStyle(
+                color: Color(0xffe3e1f0), fontSize: 15)),
+              const Spacer(),
+              Text(labels[period]!, style: const TextStyle(
+                color: Color(0xffffe8a1), fontSize: 12))]),
+            const SizedBox(height: 18),
+            Row(textDirection: TextDirection.ltr,
+              crossAxisAlignment: CrossAxisAlignment.end, children: [
+              Flexible(child: Text(str(sales['gross']), maxLines: 1,
+                overflow: TextOverflow.ellipsis, textDirection: TextDirection.ltr,
+                style: const TextStyle(color: Colors.white, fontSize: 36,
+                  fontWeight: FontWeight.w800))),
+              Padding(padding: const EdgeInsets.only(left: 8, bottom: 6),
+                child: Text(currency, style: const TextStyle(
+                  color: Color(0xffd2cde2), fontSize: 13))),
+            ]),
+          ])),
+        const SizedBox(height: 12),
         LayoutBuilder(builder: (context, constraints) {
           final width = (constraints.maxWidth - 10) / 2;
           return Wrap(spacing: 10, runSpacing: 10, children: [
@@ -507,7 +558,7 @@ class _DashboardState extends State<_Dashboard> {
               child: Text('تسجيل طلب جديد', style: TextStyle(
                 fontSize: 16, fontWeight: FontWeight.w700))))),
         LayoutBuilder(builder: (context, constraints) {
-          final width = (constraints.maxWidth - 10) / 2;
+          final width = (constraints.maxWidth - 20) / 3;
           return Wrap(spacing: 10, runSpacing: 10, children: [
             for (final q in quick) SizedBox(width: width,
               child: shortcut(q.$1, q.$2, q.$3)),
