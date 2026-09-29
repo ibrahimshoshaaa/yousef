@@ -28,6 +28,8 @@ jobs:
           cache: true
       - name: Generate standard Android host files
         run: flutter create --platforms android --project-name perfume_erp .
+      - name: Enable Internet for release builds
+        run: python3 tool/ensure_android_internet.py
       - name: Fetch packages
         run: flutter pub get
       - name: Check Dart code
