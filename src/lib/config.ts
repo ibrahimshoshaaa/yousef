@@ -24,7 +24,7 @@ const shopifyEnvSchema = z.object({
   SHOPIFY_API_SECRET: z.string().min(1, "SHOPIFY_API_SECRET is not set"),
   SHOPIFY_APP_URL: z.string().url("SHOPIFY_APP_URL must be a valid URL"),
   SHOPIFY_WEBHOOK_SECRET: z.string().optional(),
-  SHOPIFY_SCOPES: z.string().min(1).default("read_products,read_orders,read_returns"),
+  SHOPIFY_SCOPES: z.string().min(1).default("read_products,write_products,read_orders,read_returns,read_merchant_managed_fulfillment_orders,write_merchant_managed_fulfillment_orders,read_fulfillments,write_fulfillments"),
   SHOPIFY_API_VERSION: z.string().min(1).default("2026-07"),
   SHOPIFY_TOKEN_ENCRYPTION_KEY: z
     .string()
