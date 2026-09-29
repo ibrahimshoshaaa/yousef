@@ -30,6 +30,8 @@ class _ReportsPageState extends State<ReportsPage> {
   }
   @override
   Widget build(BuildContext context) => ListView(padding: const EdgeInsets.all(16), children: [
+    const PageIntro(title: 'التقارير', subtitle: 'ملخص المبيعات والتحصيل والمخزون', icon: Icons.bar_chart_rounded),
+    const SizedBox(height: 16),
     Wrap(spacing: 8, children: const {'today': 'اليوم', 'yesterday': 'أمس',
       '7d': 'آخر ٧ أيام', '30d': 'آخر ٣٠ يوم',
       'month': 'هذا الشهر', 'lastMonth': 'الشهر الماضي'}.entries.map((entry) =>
@@ -81,6 +83,7 @@ class ConsumptionPage extends StatelessWidget {
   final String? orderId;
   @override
   Widget build(BuildContext context) => DataView(api: api,
+    title: 'استهلاك الخامات', subtitle: 'تفاصيل المواد المستخدمة في الطلبات', icon: Icons.science_outlined,
     path: '/api/consumption?limit=100${orderId == null ? '' : '&orderId=${Uri.encodeQueryComponent(orderId!)}'}',
     item: (context, entry, reload) => Card(child: ExpansionTile(
       title: Text('طلب #${str((entry['order'] as Map?)?['orderNumber'])}'),
@@ -92,9 +95,10 @@ class ConsumptionPage extends StatelessWidget {
 }
 
 class SettingsPage extends StatefulWidget {
-  const SettingsPage({required this.api, required this.isOwner, super.key});
+  const SettingsPage({required this.api, required this.isOwner, required this.onAccount, super.key});
   final ErpApi api;
   final bool isOwner;
+  final VoidCallback onAccount;
   @override
   State<SettingsPage> createState() => _SettingsPageState();
 }
@@ -108,8 +112,17 @@ class _SettingsPageState extends State<SettingsPage> {
   void dispose() { name.dispose(); amount.dispose(); super.dispose(); }
   @override
   Widget build(BuildContext context) => ListView(padding: const EdgeInsets.all(16), children: [
+    const PageIntro(title: 'الإعدادات', subtitle: 'الحساب وإعدادات المتجر', icon: Icons.settings_outlined),
+    const SizedBox(height: 16),
+    Card(child: ListTile(leading: const Icon(Icons.admin_panel_settings_outlined),
+      title: const Text('الحساب والأمان'), subtitle: const Text('كلمة المرور والمستخدمون'),
+      trailing: const Icon(Icons.chevron_left), onTap: widget.onAccount)),
+    const SizedBox(height: 12),
     FutureBuilder<dynamic>(future: current, builder: (context, snapshot) {
-      if (!snapshot.hasData) return const PageSkeleton(embedded: true);
+      if (!snapshot.hasData) return snapshot.hasError
+        ? TextButton(onPressed: () => setState(() => current = widget.api.get('/api/mobile/settings')),
+            child: const Text('تعذر تحميل الإعدادات · إعادة المحاولة'))
+        : const PageSkeleton(embedded: true);
       final store = json(snapshot.data['data']);
       if (!initialized) {
         initialized = true;
@@ -121,12 +134,14 @@ class _SettingsPageState extends State<SettingsPage> {
         field('اسم المتجر', name),
         ListTile(title: const Text('العملة'), subtitle: Text(str(store['currency']))),
         ListTile(title: const Text('المنطقة الزمنية'), subtitle: Text(str(store['timezone']))),
-        field('المبلغ (EGP)', amount, type: TextInputType.number),
+        field('تكلفة المرتجع الافتراضية (EGP)', amount, type: TextInputType.number),
         SwitchListTile(title: const Text('إظهار التكلفة التقديرية'),
           value: costing, onChanged: widget.isOwner ? (value) => setState(() => costing = value) : null),
         if (widget.isOwner) FilledButton(onPressed: () async {
           final value = double.tryParse(amount.text);
-          if (value == null || value < 0 || name.text.trim().length < 2) return;
+          if (value == null || value < 0 || name.text.trim().length < 2) {
+            showMessage(context, 'راجع اسم المتجر وتكلفة المرتجع'); return;
+          }
           try { await perform(context, () => widget.api.put('/api/mobile/settings',
             {'name': name.text.trim(), 'defaultReturnCost': value, 'costingEnabled': costing})); }
           catch (_) { /* Error shown by helper. */ }
@@ -147,13 +162,17 @@ class _ShopifyPageState extends State<ShopifyPage> {
   void reload() => setState(() => status = widget.api.get('/api/shopify/status'));
   @override
   Widget build(BuildContext context) => ListView(padding: const EdgeInsets.all(16), children: [
+    const PageIntro(title: 'Shopify', subtitle: 'حالة الاتصال ومزامنة بيانات المتجر', icon: Icons.storefront_outlined),
+    const SizedBox(height: 16),
     FutureBuilder<dynamic>(future: status, builder: (context, snapshot) {
       if (!snapshot.hasData) return snapshot.hasError
-        ? Text('${snapshot.error}') : const PageSkeleton(embedded: true);
+        ? TextButton(onPressed: reload, child: const Text('تعذر تحميل حالة الاتصال · إعادة المحاولة'))
+        : const PageSkeleton(embedded: true);
       final data = json(snapshot.data['data']);
+      final connection = data['connection'] is Map ? json(data['connection']) : data;
       return Card(child: Column(children: [
-        ListTile(title: const Text('متجر Shopify'), subtitle: Text(str(data['shopDomain'] ?? data['shop']))),
-        ListTile(title: const Text('حالة الربط'), subtitle: Text(str(data['status']))),
+        ListTile(title: const Text('متجر Shopify'), subtitle: Text(str(connection['shopDomain'] ?? 'غير متصل'))),
+        ListTile(title: const Text('حالة الربط'), subtitle: Text(str(connection['status'] ?? 'غير متصل'))),
         FilledButton(onPressed: () async {
           try { await perform(context, () => widget.api.post('/api/shopify/sync', {}), success: 'اكتملت المزامنة'); reload(); }
           catch (_) { /* Error shown by helper. */ }
