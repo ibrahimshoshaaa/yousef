@@ -5,6 +5,9 @@ import { redirect } from "next/navigation";
 import { signOut } from "@/auth";
 import { requireAuth } from "@/lib/auth-helpers";
 import { db } from "@/lib/db";
+import { can } from "@/lib/rbac";
+import Image from "next/image";
+import auraicIcon from "../../../mobile/assets/auraic-icon.jpg";
 
 export default async function DashboardLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   let session;
@@ -18,10 +21,10 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
   };
 
   return (
-    <div className="min-h-screen bg-[#f6f7f8]">
-      <aside className="fixed inset-y-0 right-0 z-20 hidden w-64 flex-col overflow-y-auto bg-[#18251f] text-white lg:flex">
+    <div className="min-h-screen bg-[#f4f5fa] pb-20 lg:pb-0">
+      <aside className="fixed inset-y-0 right-0 z-20 hidden w-64 flex-col overflow-y-auto bg-[#191735] text-white lg:flex">
         <div className="border-b border-white/10 px-6 py-7">
-          <p className="text-lg font-bold tracking-tight">✦ Perfume ERP</p>
+          <p className="flex items-center gap-3 text-lg font-bold tracking-tight"><Image src={auraicIcon} alt="" className="size-10 rounded-xl object-cover" />Auraic</p>
           <p className="mt-2 truncate text-xs text-slate-400">{storeName}</p>
         </div>
         <div className="flex-1"><NavLinks /></div>
@@ -30,11 +33,11 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
         </form>
       </aside>
 
-      <header className="sticky top-0 z-30 border-b border-slate-200 bg-[#18251f] text-white lg:hidden">
+      <header className="sticky top-0 z-30 border-b border-white/10 bg-[#191735] text-white lg:hidden">
         <details className="group">
-          <summary className="flex cursor-pointer list-none items-center justify-between px-5 py-4">
-            <div><span className="font-bold">✦ Perfume ERP</span><span className="mt-1 block text-xs text-slate-400">{storeName}</span></div>
-            <span className="rounded-lg border border-white/20 px-3 py-2 text-sm group-open:bg-white/10">القائمة ☰</span>
+          <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 marker:hidden [&::-webkit-details-marker]:hidden">
+            <div className="flex items-center gap-3"><Image src={auraicIcon} alt="" className="size-10 rounded-xl object-cover" /><div><span className="font-bold">Auraic</span><span className="block max-w-40 truncate text-xs text-slate-300">{storeName}</span></div></div>
+            <span className="rounded-lg border border-white/20 px-3 py-2 text-sm group-open:bg-white/10">☰ <span className="sr-only">القائمة</span></span>
           </summary>
           <div className="max-h-[70vh] overflow-y-auto border-t border-white/10">
             <NavLinks />
@@ -46,6 +49,9 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
       </header>
 
       <div className="min-w-0 lg:mr-64">{children}</div>
+      <nav aria-label="التنقل السريع" className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-[#e6e4ef] bg-white/95 px-1 pb-[env(safe-area-inset-bottom)] pt-1 shadow-[0_-8px_24px_#1917350a] backdrop-blur lg:hidden">
+        <NavLinks compact canCreateOrder={can(session.role, "orders.write")} />
+      </nav>
     </div>
   );
 }

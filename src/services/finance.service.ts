@@ -11,7 +11,9 @@ export async function listReturns(storeId: string) {
 }
 
 export async function listExpenses(storeId: string) {
-  return db.expense.findMany({ where: { storeId }, include: { category: true, return: true }, orderBy: { date: "desc" } });
+  return db.expense.findMany({ where: { storeId }, include: { category: true,
+    return: { include: { order: { select: { orderNumber: true, customerRef: true, customerPhone: true, customerAddress: true } },
+      items: { include: { orderItem: { select: { title: true } } } } } } }, orderBy: { date: "desc" } });
 }
 
 export async function createExpenseCategory(storeId: string, name: string, userId?: string) {

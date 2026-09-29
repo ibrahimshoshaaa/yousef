@@ -45,6 +45,6 @@ export function NavigationFeedback() {
 
   if (!busy) return null;
   return <div role="status" aria-label="جارٍ التحميل" className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-[#f6f7f8]/95 px-6">
-    <div className="size-11 animate-spin rounded-full border-4 border-[#dce8df] border-t-[#263b35]" aria-hidden="true" />
+    <div className="size-11 animate-spin rounded-full border-4 border-[#dce8df] border-t-[#191735]" aria-hidden="true" />
   </div>;
 }

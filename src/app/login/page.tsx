@@ -1,6 +1,9 @@
 import { AuthError } from "next-auth";
 import { redirect } from "next/navigation";
 import { auth, signIn } from "@/auth";
+import Image from "next/image";
+import auraicLogo from "../../../mobile/assets/auraic-logo.jpg";
+import auraicIcon from "../../../mobile/assets/auraic-icon.jpg";
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   if ((await auth())?.user) redirect("/dashboard");
@@ -11,14 +14,14 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
     catch (err) { if (err instanceof AuthError) redirect("/login?error=invalid"); throw err; }
   }
   return (
-    <main className="min-h-screen bg-[#f6f3ed] text-[#25251f]" dir="rtl">
+    <main className="min-h-screen bg-[#f4f5fa] text-[#191735]" dir="rtl">
       <div className="mx-auto grid min-h-screen max-w-7xl lg:grid-cols-2">
         <section className="flex items-center justify-center px-5 py-12 sm:px-10 lg:px-16">
           <div className="w-full max-w-md">
             <div className="mb-12 flex items-center gap-3">
-              <span aria-hidden="true" className="flex size-11 items-center justify-center rounded-xl bg-[#263b35] text-xl font-semibold text-[#e8cf91]">✦</span>
+              <Image src={auraicIcon} alt="" className="size-12 rounded-xl object-cover" />
               <div>
-                <p className="text-lg font-bold tracking-tight">Perfume ERP</p>
+                <p className="text-lg font-bold tracking-tight">Auraic</p>
                 <p className="text-xs text-[#77786e]">مساحة عملك لإدارة متجر العطور</p>
               </div>
             </div>
@@ -35,17 +38,17 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
                 <input id="password" required type="password" name="password" autoComplete="current-password" placeholder="أدخل كلمة المرور" className="w-full rounded-xl border border-[#dcded5] bg-white px-4 py-3.5 text-sm outline-none transition placeholder:text-[#a7a9a2] focus:border-[#9a7539] focus:ring-4 focus:ring-[#9a7539]/10" />
               </div>
               {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">البريد الإلكتروني أو كلمة المرور غير صحيحة.</p>}
-              <button type="submit" className="w-full rounded-xl bg-[#263b35] px-5 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#345348] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#263b35]">الدخول إلى لوحة التحكم</button>
+              <button type="submit" className="w-full rounded-xl bg-[#191735] px-5 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#302d58] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#191735]">الدخول إلى لوحة التحكم</button>
             </form>
             <p className="mt-9 text-center text-xs text-[#8a8c83]">حسابات الفريق يديرها مالك المتجر</p>
           </div>
         </section>
-        <aside className="relative hidden overflow-hidden bg-[#263b35] p-16 text-white lg:flex lg:flex-col lg:justify-between">
+        <aside className="relative hidden overflow-hidden bg-[#191735] p-16 text-white lg:flex lg:flex-col lg:justify-between">
           <div aria-hidden="true" className="absolute -left-32 -top-32 size-96 rounded-full border border-white/10" />
           <div aria-hidden="true" className="absolute -left-12 -top-12 size-96 rounded-full border border-white/10" />
-          <div className="relative text-sm font-semibold tracking-wide text-[#e8cf91]">PERFUME ERP</div>
+          <Image src={auraicLogo} alt="Auraic" className="relative w-52 rounded-xl object-cover" />
           <div className="relative max-w-lg">
-            <div aria-hidden="true" className="mb-8 text-6xl text-[#e8cf91]">✦</div>
+            <div aria-hidden="true" className="mb-8 text-6xl text-[#ffe8a1]">✦</div>
             <h2 className="text-4xl font-bold leading-snug">كل تفاصيل متجرك،<br />في مكان واحد.</h2>
             <p className="mt-6 max-w-sm text-base leading-8 text-[#ccd7cf]">تابع الطلبات والمخزون والوصفات والتقارير من لوحة تحكم مصممة لعملك اليومي.</p>
           </div>

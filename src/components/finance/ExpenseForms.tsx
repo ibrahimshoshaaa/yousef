@@ -5,7 +5,7 @@ import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "rea
 
 type Option = { id: string; name: string };
 const inputClass = "mt-2 block w-full min-w-0 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-[#96723c] focus:ring-2 focus:ring-amber-100";
-const buttonClass = "rounded-xl bg-[#263b35] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#345348] disabled:opacity-50";
+const buttonClass = "rounded-xl bg-[#191735] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#302d58] disabled:opacity-50";
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return <label className="block min-w-0 text-sm font-medium text-slate-700">{label}{children}</label>;

@@ -35,7 +35,7 @@ export function ShopifyOrderActions({ orderId, stage, fulfillmentStatus, missing
   return <div className="space-y-3 border-t border-slate-100 pt-4">
     {stage === "DELIVERED" ? <p className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-900">تم تسجيل تسليم الشحنة في Shopify.</p> :
       next ? <button type="button" onClick={update} disabled={busy || (next.status !== "PREPARED" && missingScopes.length > 0)}
-        className="rounded-xl bg-[#263b35] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">
+        className="rounded-xl bg-[#191735] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">
         {busy ? "جارٍ التحديث..." : next.label}
       </button> : <p className="text-sm text-slate-500">راجع حالة الشحنة في Shopify قبل متابعة الطلب.</p>}
     {next?.status !== "PREPARED" && missingScopes.length > 0 &&

@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import Link from "next/link";
 import { db } from "@/lib/db";
 import { requireAuth } from "@/lib/auth-helpers";
 import { can } from "@/lib/rbac";
@@ -29,20 +30,21 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
       <div><p className="text-sm font-semibold text-[#96723c]">المالية والمخزون</p><h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">المصروفات</h1><p className="mt-2 text-sm text-slate-500">تابع مصروفات المتجر ومشتريات الخامات المسجلة تلقائيًا عند إضافة المخزون.</p></div>
       {can(session.role, "expenses.write") && <ExpenseForms categories={categories} currency={currency} initialOpen={add === "1"} />}
     </header>
-    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+    <section className="rounded-3xl bg-[#191735] p-6 text-white shadow-sm">
+      <p className="text-sm text-[#d9d6ed]">إجمالي المصروفات</p><strong className="mt-3 block text-3xl font-bold" dir="ltr">{formatAmount(selectedCategory ? filteredTotal : total)}</strong><p className="mt-3 text-sm text-[#d9d6ed]">{visibleExpenses.length} مصروف {selectedCategory ? "في الفئة المحددة" : "مسجل"}</p>
+    </section>
+    <section className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div><p className="text-sm text-slate-500">إجمالي المصروفات</p><p className="mt-1 text-2xl font-bold text-[#263b35]">{formatAmount(total)}</p></div>
+        <h2 className="text-lg font-semibold text-[#191735]">سجل المصروفات</h2>
         <form action="/dashboard/expenses" method="get" className="flex flex-wrap items-end gap-2">
           <label className="text-sm font-medium text-slate-700">تصفية حسب الفئة<select name="category" defaultValue={selectedCategory} className="mt-2 block min-w-40 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-[#96723c]"><option value="">كل الفئات</option>{filterCategories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label>
           <button type="submit" className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">تطبيق</button>
         </form>
       </div>
-      <div className="my-5 border-t border-slate-100" />
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3"><h2 className="text-lg font-semibold text-slate-900">سجل المصروفات</h2><div className="flex flex-wrap items-center gap-2">{selectedCategory && <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-[#96723c]">إجمالي الفئة: {formatAmount(filteredTotal)}</span>}<span className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600">{visibleExpenses.length} مصروف</span></div></div>
-      <div className="space-y-3">{visibleExpenses.map((expense) => <article key={expense.id} className="flex flex-col gap-3 rounded-xl border border-slate-100 bg-slate-50/60 p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="min-w-0"><strong className="text-sm text-slate-900">{expense.category.name}</strong>{expense.description && <p className="mt-1 break-words text-sm text-slate-600">{expense.description}</p>}<time className="mt-2 block text-xs text-slate-500" dateTime={expense.date.toISOString()}>{expense.date.toLocaleDateString("ar-EG")}</time></div>
-        <strong className="shrink-0 text-base text-[#263b35]">{Number(expense.amount).toLocaleString("ar-EG", { maximumFractionDigits: 4 })} {expense.currency}</strong>
-      </article>)}</div>
+      <div className="space-y-4">{visibleExpenses.map((expense) => <details key={expense.id} className="group rounded-2xl border border-[#e5e4ec] bg-white p-4 shadow-sm sm:p-5">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 marker:hidden [&::-webkit-details-marker]:hidden"><div className="min-w-0"><strong className="text-sm text-[#191735]">{expense.category.name}</strong><p className="mt-1 text-sm text-slate-500">{expense.return ? `تكلفة إرجاع طلب #${expense.return.order.orderNumber ?? expense.return.orderId.slice(-8)}` : expense.description || "مصروف مسجل"}</p><time className="mt-2 block text-xs text-slate-500" dateTime={expense.date.toISOString()}>{expense.date.toLocaleDateString("ar-EG")}</time></div><div className="flex shrink-0 items-center gap-2"><strong className="text-sm text-[#191735]">{Number(expense.amount).toLocaleString("ar-EG", { maximumFractionDigits: 4 })} {expense.currency}</strong><span aria-hidden="true" className="group-open:rotate-180">⌄</span></div></summary>
+        <div className="mt-4 space-y-2 border-t border-[#e5e4ec] pt-4 text-sm text-slate-600">{expense.return ? <><p>الفاتورة: <strong>#{expense.return.order.orderNumber ?? expense.return.orderId.slice(-8)}</strong></p><p>العميل: {expense.return.order.customerRef || "غير متاح"}</p>{expense.return.order.customerPhone && <p>الهاتف: {expense.return.order.customerPhone}</p>}{expense.return.order.customerAddress && <p>العنوان: {expense.return.order.customerAddress}</p>}<p>الأصناف: {expense.return.items.map(item => item.orderItem.title).join("، ") || "غير متاحة"}</p><Link href={`/dashboard/orders?q=${encodeURIComponent(expense.return.order.orderNumber ?? "")}`} className="inline-block font-semibold text-[#4f4a8a] underline">عرض الطلب ←</Link></> : <p className="break-words">{expense.description || "لا يوجد وصف إضافي"}</p>}</div>
+      </details>)}</div>
       {!visibleExpenses.length && <p className="rounded-xl bg-slate-50 p-8 text-center text-sm text-slate-500">{selectedCategory ? "لا توجد مصروفات في هذه الفئة." : "لا توجد مصروفات مسجلة بعد."}</p>}
     </section>
   </main>;
