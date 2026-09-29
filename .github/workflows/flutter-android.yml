@@ -34,10 +34,17 @@ jobs:
         run: flutter analyze --no-fatal-infos
       - name: Run Flutter tests
         run: flutter test
-      - name: Build debug APK
-        run: flutter build apk --debug
-      - name: Upload debug APK
+      - name: Build release APKs per architecture
+        run: flutter build apk --release --split-per-abi
+      - name: Upload Android 64-bit APK
         uses: actions/upload-artifact@v4
         with:
-          name: perfume-erp-debug-apk
-          path: mobile/build/app/outputs/flutter-apk/app-debug.apk
+          name: perfume-erp-arm64-release
+          path: mobile/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+          if-no-files-found: error
+      - name: Upload Android 32-bit APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: perfume-erp-arm32-release
+          path: mobile/build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
+          if-no-files-found: error

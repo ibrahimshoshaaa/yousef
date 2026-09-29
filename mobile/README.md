@@ -6,7 +6,7 @@ The Android screens call the existing services for orders, stock, expenses, retu
 
 ## Build prerequisites
 
-Install Flutter and the Android SDK on the build machine. From this directory run `flutter create --platforms android --project-name perfume_erp .` once to generate standard Android project files, then `flutter pub get`, `flutter analyze --no-fatal-infos`, `flutter test`, and `flutter build apk --debug`.
+Install Flutter and the Android SDK on the build machine. From this directory run `flutter create --platforms android --project-name perfume_erp .` once to generate standard Android project files, then `flutter pub get`, `flutter analyze --no-fatal-infos`, `flutter test`, and `flutter build apk --release --split-per-abi`. The Android workflow uploads separate ARM64 and ARM32 APKs; install the ARM64 build on a modern 64-bit phone. These release-mode test builds use the generated Android project's debug signing key. Set up a persistent private release signing key before distributing updates outside testing.
 
 For a preview backend, pass `--dart-define=API_BASE_URL=https://your-preview-domain` to `flutter run` or `flutter build apk`. Production defaults to `https://yousef-beryl.vercel.app`.
 
