@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { getClientForStore } from "@/services/shopify/connection.service";
 import { upsertShopifyOrder } from "@/services/shopify/order-sync.service";
+import { SHOPIFY_FULFILLMENT_SCOPES } from "@/lib/config";
 
 export const shopifyOrderStages = ["PREPARED", "SHIPPING", "DELIVERED"] as const;
 export type ShopifyOrderStage = (typeof shopifyOrderStages)[number];
@@ -25,19 +26,19 @@ export async function updateShopifyOrderStage(params: {
 
     const connection = await db.shopifyConnection.findUnique({ where: { storeId } });
     const granted = new Set(connection?.scope?.split(",").map(s => s.trim()) ?? []);
-    const needed = stage === "SHIPPING"
-      ? ["read_merchant_managed_fulfillment_orders", "write_merchant_managed_fulfillment_orders"]
-      : ["read_fulfillments", "write_fulfillments", "read_merchant_managed_fulfillment_orders"];
-    if (connection?.status !== "CONNECTED" || needed.some(s => !granted.has(s))) {
-      throw new ShopifyWorkflowError("أعد ربط المتجر من إعدادات Shopify للموافقة على صلاحيات الشحن والتسليم");
+    const needed = stage === "SHIPPING" ? SHOPIFY_FULFILLMENT_SCOPES.slice(0, 2) : ["write_fulfillments"];
+    const missing = needed.filter(s => !granted.has(s));
+    if (connection?.status !== "CONNECTED" || missing.length) {
+      throw new ShopifyWorkflowError(`صلاحيات Shopify غير مفعّلة${missing.length ? `: ${missing.join(", ")}` : ""}. راجع صفحة Shopify ثم أعد ربط المتجر.`);
     }
     const client = await getClientForStore(storeId);
-    const state = await client.fetchFulfillmentState(order.shopifyId);
+    const state = stage === "SHIPPING" ? await client.fetchFulfillmentState(order.shopifyId) : await client.fetchDeliveryState(order.shopifyId);
     if (!state) throw new ShopifyWorkflowError("الطلب غير موجود في Shopify");
-    if (state.fulfillmentOrders.pageInfo.hasNextPage || state.fulfillments.length >= 100) throw new ShopifyWorkflowError("الطلب يحتوي على شحنات كثيرة، راجعه في Shopify");
+    if (state.fulfillments.length >= 100 || ("fulfillmentOrders" in state && state.fulfillmentOrders.pageInfo.hasNextPage)) throw new ShopifyWorkflowError("الطلب يحتوي على شحنات كثيرة، راجعه في Shopify");
 
     if (stage === "SHIPPING") {
       if (state.displayFulfillmentStatus !== "FULFILLED") {
+        if (!("fulfillmentOrders" in state)) throw new ShopifyWorkflowError("تعذر قراءة شحنات الطلب");
         const open = state.fulfillmentOrders.nodes.filter(fo => fo.status === "OPEN");
         if (!["UNFULFILLED", "PARTIALLY_FULFILLED"].includes(state.displayFulfillmentStatus) || !open.length ||
             state.fulfillmentOrders.nodes.some(fo => !["OPEN", "CLOSED"].includes(fo.status))) {
