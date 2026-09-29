@@ -65,15 +65,19 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           <h2 className="text-lg font-semibold">التكاليف</h2>
           <div className="mt-6 grid gap-6 sm:grid-cols-2">
             <label className="block text-sm font-medium">تكلفة المرتجع الافتراضية ({store.currency})<input name="defaultReturnCost" required type="number" min="0" max="1000000" step="0.01" defaultValue={returnCost} disabled={session.role !== "OWNER"} className="mt-2 block w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-[#96723c] disabled:bg-slate-50" /><span className="mt-2 block text-xs font-normal text-slate-500">تُسجّل هذه التكلفة ضمن مصروفات المرتجع عند المعالجة.</span></label>
-            <label aria-label="إظهار التكلفة التقديرية" className="flex items-start gap-3 rounded-xl bg-slate-50 p-4 text-sm"><input name="costingEnabled" type="checkbox" defaultChecked={costingEnabled === "true"} disabled={session.role !== "OWNER"} className="mt-1 size-4 accent-[#263b35]" /><span><strong className="block">إظهار التكلفة التقديرية</strong><span className="mt-1 block leading-6 text-slate-500">تعرض تقدير تكلفة الوصفات وهوامش الربح عند توفر أسعار المواد.</span></span></label>
+            <label aria-label="إظهار التكلفة التقديرية" className="flex items-start gap-3 rounded-xl bg-slate-50 p-4 text-sm"><input name="costingEnabled" type="checkbox" defaultChecked={costingEnabled === "true"} disabled={session.role !== "OWNER"} className="mt-1 size-4 accent-[#191735]" /><span><strong className="block">إظهار التكلفة التقديرية</strong><span className="mt-1 block leading-6 text-slate-500">تعرض تقدير تكلفة الوصفات وهوامش الربح عند توفر أسعار المواد.</span></span></label>
           </div>
         </section>
-        {session.role === "OWNER" ? <button type="submit" className="rounded-xl bg-[#263b35] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#345348]">حفظ التغييرات</button> : <p className="text-sm text-slate-500">تعديل هذه الإعدادات متاح لمالك المتجر فقط.</p>}
+        {session.role === "OWNER" ? <button type="submit" className="rounded-xl bg-[#191735] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#302d58]">حفظ التغييرات</button> : <p className="text-sm text-slate-500">تعديل هذه الإعدادات متاح لمالك المتجر فقط.</p>}
       </form>
       {can(session.role, "shopify.write") && <section className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-7">
         <div><h2 className="text-lg font-semibold">ربط Shopify</h2><p className="mt-1 text-sm leading-6 text-slate-500">إدارة اتصال المتجر، المزامنة، ومراجعة حالة الطلبات والمنتجات.</p></div>
-        <Link href="/dashboard/shopify" className="inline-flex w-full shrink-0 items-center justify-center rounded-xl bg-[#263b35] px-5 py-3 text-sm font-semibold text-white hover:bg-[#345348] sm:w-auto">فتح إعدادات Shopify ←</Link>
+        <Link href="/dashboard/shopify" className="inline-flex w-full shrink-0 items-center justify-center rounded-xl bg-[#191735] px-5 py-3 text-sm font-semibold text-white hover:bg-[#302d58] sm:w-auto">فتح إعدادات Shopify ←</Link>
       </section>}
+      <section className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-7">
+        <div><h2 className="text-lg font-semibold">الحساب والأمان</h2><p className="mt-1 text-sm text-slate-500">غيّر كلمة المرور{session.role === "OWNER" ? " أو أضف أدمن آخر بنفس الصلاحيات" : ""}.</p></div>
+        <Link href="/dashboard/account" className="inline-flex shrink-0 items-center justify-center rounded-xl bg-[#191735] px-5 py-3 text-sm font-semibold text-white">إدارة الحساب ←</Link>
+      </section>
       {can(session.role, "materials.write") && <MaterialTypesSettings initialTypes={materialTypes} />}
     </main>
   );

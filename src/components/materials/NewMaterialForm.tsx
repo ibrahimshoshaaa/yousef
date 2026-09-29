@@ -138,7 +138,7 @@ export function NewMaterialForm({ types, suppliers }: Props) {
         </select>
         <p className="mt-2 text-xs text-slate-500">النوع تصنيف للخامات، مثل «زيت». لو اخترته بالفعل، كمّل البيانات واحفظ الخامة.</p>
         {availableTypes.length === 0 && <p className="mt-2 text-sm text-amber-700">أضف نوع مادة أولًا للمتابعة.</p>}
-        {availableTypes.length > 0 && <button type="button" onClick={() => setShowTypeCreator((current) => !current)} className="mt-3 text-sm font-semibold text-[#315b4c] underline">{showTypeCreator ? "إخفاء إضافة النوع" : "+ إضافة نوع آخر (اختياري)"}</button>}
+        {availableTypes.length > 0 && <button type="button" onClick={() => setShowTypeCreator((current) => !current)} className="mt-3 text-sm font-semibold text-[#514b8c] underline">{showTypeCreator ? "إخفاء إضافة النوع" : "+ إضافة نوع آخر (اختياري)"}</button>}
         {showTypeCreator && <MaterialTypeCreator onCreated={(type) => {
           setAvailableTypes((current) => [...current, type].sort((a, b) => a.name.localeCompare(b.name, "ar")));
           set("materialTypeId", type.id);

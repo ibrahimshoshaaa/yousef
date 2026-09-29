@@ -30,11 +30,11 @@ export default async function MaterialDetailPage({ params }: { params: Promise<{
 
   return <main className="mx-auto max-w-5xl space-y-4 px-4 py-4 sm:space-y-6 sm:px-8 sm:py-8">
     <header className="space-y-2">
-      <Link href="/dashboard/inventory" className="inline-flex min-h-9 items-center text-sm font-semibold text-[#315b4c] hover:underline">→ رجوع للمخزون</Link>
+      <Link href="/dashboard/inventory" className="inline-flex min-h-9 items-center text-sm font-semibold text-[#514b8c] hover:underline">→ رجوع للمخزون</Link>
       <div className="flex flex-wrap items-start justify-between gap-3"><div className="min-w-0"><h1 className="break-words text-2xl font-bold tracking-tight sm:text-3xl">{material.name}</h1><p className="mt-1 text-sm text-slate-500">{material.materialType.name}{material.supplier ? ` · ${material.supplier.name}` : ""}{material.sku ? ` · ${material.sku}` : ""}</p></div>{isLow && <span className="rounded-full bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-900">يحتاج إعادة شراء</span>}</div>
     </header>
     <section aria-label="رصيد الخامة" className={`rounded-2xl border p-4 shadow-sm sm:p-6 ${isLow ? "border-amber-200 bg-amber-50" : "border-slate-200 bg-white"}`}>
-      <p className="text-sm text-slate-600">الرصيد الحالي</p><strong className={`mt-1 block text-3xl font-bold tabular-nums ${isLow ? "text-amber-900" : "text-[#263b35]"}`}>{format(balance)} <span className="text-lg">{material.unit}</span></strong>
+      <p className="text-sm text-slate-600">الرصيد الحالي</p><strong className={`mt-1 block text-3xl font-bold tabular-nums ${isLow ? "text-amber-900" : "text-[#191735]"}`}>{format(balance)} <span className="text-lg">{material.unit}</span></strong>
       {reorder !== null && <p className="mt-2 text-xs text-slate-500">حد إعادة الشراء: {format(reorder)} {material.unit}</p>}
     </section>
     {(material.defaultCost !== null || material.capacityMl !== null) && <section aria-label="بيانات الخامة" className="grid grid-cols-2 gap-2 sm:gap-3">
@@ -51,6 +51,6 @@ export default async function MaterialDetailPage({ params }: { params: Promise<{
         </article>;
       })}</div> : <p className="p-6 text-sm text-slate-500">لا توجد حركات لهذه الخامة بعد.</p>}
     </section>
-    {can(session.role, "inventory.write") && <details className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"><summary className="cursor-pointer font-bold text-[#263b35]">تسوية الرصيد يدويًا</summary><p className="mb-4 mt-2 text-xs text-slate-500">للتصحيح والجرد. لتسجيل مشتريات جديدة وتكلفتها استخدم «إضافة مخزون» من صفحة المخزون.</p><AdjustInventoryForm materialId={material.id} materialName={material.name} unit={material.unit} currentBalance={balance} /></details>}
+    {can(session.role, "inventory.write") && <details className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"><summary className="cursor-pointer font-bold text-[#191735]">تسوية الرصيد يدويًا</summary><p className="mb-4 mt-2 text-xs text-slate-500">للتصحيح والجرد. لتسجيل مشتريات جديدة وتكلفتها استخدم «إضافة مخزون» من صفحة المخزون.</p><AdjustInventoryForm materialId={material.id} materialName={material.name} unit={material.unit} currentBalance={balance} /></details>}
   </main>;
 }

@@ -60,7 +60,7 @@ export function QuickStockForm({ extraCategories, initialOpen = false }: { extra
   }
 
   return <div className="space-y-2">
-    <button type="button" onClick={() => { setMessage(""); setNotice(""); dialog.current?.showModal(); }} className="rounded-xl bg-[#263b35] px-5 py-3 text-sm font-semibold text-white hover:bg-[#345348]">+ إضافة مخزون</button>
+    <button type="button" onClick={() => { setMessage(""); setNotice(""); dialog.current?.showModal(); }} className="rounded-xl bg-[#191735] px-5 py-3 text-sm font-semibold text-white hover:bg-[#302d58]">+ إضافة مخزون</button>
     {notice && <p role="status" className="max-w-xs rounded-xl bg-green-50 p-3 text-sm text-green-800">{notice}</p>}
     <dialog ref={dialog} dir="rtl" aria-labelledby="stock-dialog-title" className="fixed inset-0 m-auto w-[calc(100%-2rem)] max-w-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-0 text-right shadow-2xl backdrop:bg-slate-950/50">
     <section className="p-5 sm:p-7">
@@ -75,10 +75,10 @@ export function QuickStockForm({ extraCategories, initialOpen = false }: { extra
       {category.startsWith("type:") && <label className="text-sm font-semibold">وحدة المخزون<select value={unit} onChange={(event) => setUnit(event.target.value as "مل" | "قطعة")} className={inputClass}><option value="قطعة">قطعة</option><option value="مل">مل</option></select></label>}
       <label className="text-sm font-semibold">الكمية ({currentUnit})<input required type="number" inputMode="decimal" min={currentUnit === "قطعة" ? "1" : "0.000001"} step={currentUnit === "قطعة" ? "1" : "any"} value={quantity} onChange={(event) => setQuantity(event.target.value)} placeholder="مثال: ١٠٠٠" className={inputClass} /></label>
       <label className="text-sm font-semibold">سعر الكمية كلها (جنيه)<input required type="number" inputMode="decimal" min="0.01" step="0.01" value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="مثال: ٥٠٠٠" className={inputClass} /></label>
-      <div className="flex items-end"><button type="submit" disabled={busy} className="w-full rounded-xl bg-[#263b35] px-5 py-3.5 font-semibold text-white disabled:opacity-50">{busy ? "جارٍ الحفظ..." : "حفظ المخزون"}</button></div>
+      <div className="flex items-end"><button type="submit" disabled={busy} className="w-full rounded-xl bg-[#191735] px-5 py-3.5 font-semibold text-white disabled:opacity-50">{busy ? "جارٍ الحفظ..." : "حفظ المخزون"}</button></div>
     </form>
-    <button type="button" onClick={() => setShowNewCategory((current) => !current)} className="mt-5 text-sm font-semibold text-[#315b4c] underline">+ إضافة نوع جديد غير الأربعة</button>
-    {showNewCategory && <div className="mt-3 flex flex-col gap-2 sm:flex-row"><input value={newCategory} onChange={(event) => setNewCategory(event.target.value)} maxLength={100} placeholder="اسم النوع الجديد" className={inputClass} /><button type="button" onClick={addCategory} disabled={!newCategory.trim() || busy} className="rounded-xl bg-[#263b35] px-5 py-3 text-sm font-semibold text-white disabled:opacity-50">إضافة النوع</button></div>}
+    <button type="button" onClick={() => setShowNewCategory((current) => !current)} className="mt-5 text-sm font-semibold text-[#514b8c] underline">+ إضافة نوع جديد غير الأربعة</button>
+    {showNewCategory && <div className="mt-3 flex flex-col gap-2 sm:flex-row"><input value={newCategory} onChange={(event) => setNewCategory(event.target.value)} maxLength={100} placeholder="اسم النوع الجديد" className={inputClass} /><button type="button" onClick={addCategory} disabled={!newCategory.trim() || busy} className="rounded-xl bg-[#191735] px-5 py-3 text-sm font-semibold text-white disabled:opacity-50">إضافة النوع</button></div>}
     </section>
     </dialog>
   </div>;

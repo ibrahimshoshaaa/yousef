@@ -4,8 +4,8 @@ import { Suspense } from "react";
 import { NavigationFeedback } from "@/components/NavigationFeedback";
 
 export const metadata: Metadata = {
-  title: "Perfume ERP",
-  description: "Shopify-connected perfume business management dashboard",
+  title: "Auraic",
+  description: "Auraic لإدارة الطلبات والمنتجات والمخزون",
 };
 
 export default function RootLayout({

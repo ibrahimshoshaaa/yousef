@@ -45,7 +45,7 @@ export function SimpleProductForm({ materials }: { materials: Material[] }) {
         {lines.length > 1 && <button type="button" onClick={() => setLines((current) => current.filter((entry) => entry.key !== line.key))} className="rounded-lg border border-red-200 px-3 py-3 text-sm text-red-700">حذف</button>}
       </div>;
     })}
-    <button type="button" disabled={lines.length >= 30} onClick={() => setLines((current) => [...current, { key: nextKey.current++, materialId: "", quantity: "" }])} className="rounded-xl border border-[#263b35] px-4 py-3 text-sm font-semibold text-[#263b35]">+ خامة أخرى</button>
-    <div className="border-t border-slate-100 pt-5"><button type="submit" disabled={busy || !materials.length} className="w-full rounded-xl bg-[#263b35] px-6 py-3.5 font-semibold text-white disabled:opacity-50">{busy ? "جارٍ الحفظ..." : "حفظ العطر وخاماته"}</button></div>
+    <button type="button" disabled={lines.length >= 30} onClick={() => setLines((current) => [...current, { key: nextKey.current++, materialId: "", quantity: "" }])} className="rounded-xl border border-[#191735] px-4 py-3 text-sm font-semibold text-[#191735]">+ خامة أخرى</button>
+    <div className="border-t border-slate-100 pt-5"><button type="submit" disabled={busy || !materials.length} className="w-full rounded-xl bg-[#191735] px-6 py-3.5 font-semibold text-white disabled:opacity-50">{busy ? "جارٍ الحفظ..." : "حفظ العطر وخاماته"}</button></div>
   </form>;
 }

@@ -24,7 +24,7 @@ export function PublishShopifyButton({ productId }: { productId: string }) {
   }
 
   return <div className="space-y-2">
-    <button type="button" disabled={busy} onClick={publish} className="rounded-xl bg-[#263b35] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{busy ? "جارٍ النشر..." : "نشر المنتج في Shopify"}</button>
+    <button type="button" disabled={busy} onClick={publish} className="rounded-xl bg-[#191735] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{busy ? "جارٍ النشر..." : "نشر المنتج في Shopify"}</button>
     {error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
   </div>;
 }

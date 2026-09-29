@@ -6,6 +6,7 @@ import { getProduct } from "@/services/product.service";
 import { AddVariantForm } from "@/components/products/AddVariantForm";
 import { PublishShopifyButton } from "@/components/products/PublishShopifyButton";
 import { db } from "@/lib/db";
+import { ArchiveProductButton } from "@/components/products/ArchiveProductButton";
 
 async function getDevStoreId() {
   const session = await requireAuth();
@@ -29,31 +30,32 @@ export default async function ProductDetailPage({
   const session = await requireAuth();
 
   return (
-    <div className="p-4 md:p-8">
+    <main className="mx-auto max-w-5xl space-y-5 px-4 py-6 sm:px-8 sm:py-9">
       <div className="mb-6">
         <Link
           href="/dashboard/products"
-          className="text-sm text-gray-400 hover:text-gray-600"
+          className="text-sm font-semibold text-[#514b8c] hover:underline"
         >
           ← المنتجات
         </Link>
         <div className="mt-2 flex items-center gap-2">
-          <h1 className="text-2xl font-bold">{product.title}</h1>
+          <h1 className="text-3xl font-bold text-[#191735]">{product.title}</h1>
           {!product.shopifyId && (
             <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">
               منتج يدوي
             </span>
           )}
         </div>
+        {can(session.role, "products.write") && <div className="mt-4"><ArchiveProductButton productId={product.id} published={Boolean(product.shopifyId)} /></div>}
       </div>
 
       <div className="space-y-4">
-        {!product.shopifyId && connection?.status === "CONNECTED" && <div className="rounded-xl border border-slate-200 bg-white p-5">
+        {!product.shopifyId && connection?.status === "CONNECTED" && <div className="rounded-2xl border border-[#e5e4ec] bg-white p-5 shadow-sm">
           <h2 className="font-semibold">الظهور في Shopify</h2>
           <p className="mt-1 text-sm text-slate-600">المنتج محفوظ داخل التطبيق فقط. نشره في Shopify يتطلب صلاحية كتابة المنتجات، وبعد النشر تظل الوصفة والخامات مرتبطة بنفس المنتج.</p>
           <div className="mt-3">{canPublish && can(session.role, "shopify.write") && product.variants.length === 1 ? <PublishShopifyButton productId={product.id} /> : <p className="text-sm text-amber-800">{!canPublish ? "فعّل write_products في إعدادات تطبيق Shopify وحدّث SHOPIFY_SCOPES على Vercel ثم أعد ربط المتجر." : "النشر من هنا متاح للمنتجات ذات الحجم الواحد ومن حساب المالك."}</p>}</div>
         </div>}
-        <div className="rounded-xl border border-[var(--border)] bg-white p-6">
+        <div className="rounded-2xl border border-[#e5e4ec] bg-white p-5 shadow-sm sm:p-6">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="font-semibold">المتغيرات (الأحجام)</h2>
             <AddVariantForm productId={product.id} />
@@ -66,7 +68,7 @@ export default async function ProductDetailPage({
               {product.variants.map((v) => (
                 <div
                   key={v.id}
-                  className="rounded-lg border border-[var(--border)] p-4"
+                  className="rounded-2xl border border-[#e5e4ec] p-4"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
@@ -119,6 +121,6 @@ export default async function ProductDetailPage({
           )}
         </div>
       </div>
-    </div>
+    </main>
   );
 }

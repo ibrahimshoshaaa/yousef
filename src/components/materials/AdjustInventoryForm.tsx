@@ -103,7 +103,7 @@ export function AdjustInventoryForm({
               onClick={() => setMode(val)}
               className={`min-h-11 rounded-xl border px-1 py-2 text-xs font-semibold sm:text-sm transition ${
                 mode === val
-                  ? "border-[#263b35] bg-[#263b35] text-white"
+                  ? "border-[#191735] bg-[#191735] text-white"
                   : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
               }`}
             >
@@ -125,7 +125,7 @@ export function AdjustInventoryForm({
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
           placeholder="0.000"
-          className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#315b4c]"
+          className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#514b8c]"
         />
         {newBalance !== null && (
           <p className="mt-1 text-xs text-gray-500">
@@ -147,7 +147,7 @@ export function AdjustInventoryForm({
           value={reason}
           onChange={(e) => setReason(e.target.value)}
           placeholder="مثال: شراء جديد، تصحيح جرد..."
-          className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#315b4c]"
+          className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#514b8c]"
         />
       </div>
 
@@ -160,7 +160,7 @@ export function AdjustInventoryForm({
           value={note}
           onChange={(e) => setNote(e.target.value)}
           rows={2}
-          className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#315b4c] resize-none"
+          className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#514b8c] resize-none"
         />
       </div>
 
@@ -178,7 +178,7 @@ export function AdjustInventoryForm({
       <button
         type="submit"
         disabled={loading}
-        className="w-full rounded-xl bg-[#263b35] px-4 py-3 text-sm font-semibold text-white hover:bg-[#345348] disabled:opacity-50"
+        className="w-full rounded-xl bg-[#191735] px-4 py-3 text-sm font-semibold text-white hover:bg-[#302d58] disabled:opacity-50"
       >
         {loading ? "جاري الحفظ..." : "تأكيد التسوية"}
       </button>
