@@ -281,52 +281,129 @@ class _NewOrderPageState extends State<NewOrderPage> {
 
   @override
   Widget build(BuildContext context) => FutureBuilder<List<Json>>(
-    future: variants, builder: (context, snapshot) => FormScaffold(
-      title: 'إضافة طلب', busy: busy, onSubmit: submit,
-      children: [
-        const FormSection(title: 'الأصناف', subtitle: 'اختر المنتج والعدد والسعر لكل صنف.'),
-        if (!snapshot.hasData && !snapshot.hasError) const LinearProgressIndicator(),
-        if (snapshot.hasError) Text('تعذر تحميل المنتجات: ${snapshot.error}'),
-        if (snapshot.hasData) ...[
-          for (var i = 0; i < lines.length; i++) Card(child: Padding(
-            padding: const EdgeInsets.all(12), child: Column(children: [
+    future: variants, builder: (context, snapshot) => Scaffold(
+      appBar: AppBar(title: const Text('طلب جديد')),
+      body: ListView(padding: const EdgeInsets.fromLTRB(16, 20, 16, 28), children: [
+        const PageIntro(title: 'تسجيل طلب جديد',
+          subtitle: 'أضف الأصناف وبيانات العميل ثم راجع الإجمالي',
+          icon: Icons.add_shopping_cart_outlined),
+        const SizedBox(height: 24),
+        _formCard('١  الأصناف', 'اختر المنتج والحجم، ثم حدد العدد والسعر.', [
+          if (!snapshot.hasData && !snapshot.hasError)
+            const LinearProgressIndicator(),
+          if (snapshot.hasError)
+            TextButton.icon(onPressed: () => setState(() => variants = loadVariants()),
+              icon: const Icon(Icons.refresh), label: const Text('تعذر تحميل المنتجات، حاول مجددًا')),
+          if (snapshot.hasData) ...[
+            if (snapshot.data!.isEmpty)
+              const Padding(padding: EdgeInsets.only(bottom: 12),
+                child: Text('لا توجد منتجات متاحة لإضافتها للطلب.')),
+            for (var i = 0; i < lines.length; i++) ...[
+              if (i > 0) const Divider(height: 32),
+              Row(children: [
+                Expanded(child: Text('الصنف ${i + 1}', style: const TextStyle(
+                  fontWeight: FontWeight.w800, color: appInk))),
+                if (lines.length > 1) IconButton(
+                  tooltip: 'إزالة الصنف', icon: const Icon(Icons.delete_outline),
+                  onPressed: () => setState(() => lines.removeAt(i).dispose())),
+              ]),
+              const SizedBox(height: 10),
               DropdownButtonFormField<String>(value: lines[i].variantId,
-                decoration: const InputDecoration(labelText: 'المنتج والحجم'),
+                isExpanded: true,
+                decoration: const InputDecoration(labelText: 'المنتج والحجم',
+                  prefixIcon: Icon(Icons.inventory_2_outlined)),
                 items: snapshot.data!.map((v) => DropdownMenuItem<String>(
-                  value: str(v['id']), child: Text(str(v['title'])))).toList(),
+                  value: str(v['id']), child: Text(str(v['title']),
+                    maxLines: 1, overflow: TextOverflow.ellipsis))).toList(),
                 onChanged: (id) { final v = snapshot.data!.firstWhere((v) => v['id'] == id);
                   setState(() { lines[i].variantId = id; lines[i].price.text = str(v['price']); }); }),
-              field('العدد', lines[i].quantity, type: TextInputType.number),
-              field('سعر القطعة', lines[i].price, type: TextInputType.number),
-              if (lines.length > 1) TextButton(onPressed: () => setState(() => lines.removeAt(i).dispose()),
-                child: const Text('إزالة الصنف')),
-            ]))),
-          TextButton.icon(onPressed: lines.length >= 30 ? null : () => setState(() => lines.add(_OrderLine())),
-            icon: const Icon(Icons.add), label: const Text('إضافة صنف')),
-        ],
-        const SizedBox(height: 12),
-        const FormSection(title: 'بيانات العميل', subtitle: 'الاسم والهاتف والعنوان المطلوب للشحن.'),
-        field('اسم العميل', name), field('رقم الهاتف', phone, type: TextInputType.phone),
-        field('عنوان التوصيل', address, lines: 3),
-        const FormSection(title: 'التحصيل', subtitle: 'يُسجّل الديبوزت فور استلامه.'),
-        SwitchListTile(value: hasDeposit, onChanged: (value) => setState(() => hasDeposit = value),
-          title: const Text('العميل دفع ديبوزت')),
-        if (hasDeposit) field('قيمة الديبوزت', deposit, type: TextInputType.number),
+              const SizedBox(height: 14),
+              Row(children: [
+                Expanded(child: field('العدد', lines[i].quantity, type: TextInputType.number)),
+                const SizedBox(width: 12),
+                Expanded(child: field('سعر القطعة', lines[i].price,
+                  type: const TextInputType.numberWithOptions(decimal: true))),
+              ]),
+            ],
+            const SizedBox(height: 4),
+            SizedBox(width: double.infinity, child: OutlinedButton.icon(
+              onPressed: lines.length >= 30 || snapshot.data!.isEmpty ? null :
+                () => setState(() => lines.add(_OrderLine())),
+              icon: const Icon(Icons.add), label: const Text('إضافة صنف آخر'))),
+          ],
+        ]),
+        const SizedBox(height: 16),
+        _formCard('٢  بيانات العميل', 'بيانات التواصل وعنوان التوصيل.', [
+          field('اسم العميل', name),
+          field('رقم الهاتف', phone, type: TextInputType.phone),
+          field('عنوان التوصيل', address, lines: 2),
+        ]),
+        const SizedBox(height: 16),
+        _formCard('٣  التحصيل', 'الديبوزت يُسجّل فور استلامه.', [
+          SwitchListTile.adaptive(contentPadding: EdgeInsets.zero,
+            value: hasDeposit, onChanged: (value) => setState(() => hasDeposit = value),
+            title: const Text('العميل دفع ديبوزت'),
+            subtitle: const Text('اتركه مغلقًا إذا لم تستلم دفعة مقدمة')),
+          if (hasDeposit) ...[
+            const SizedBox(height: 12),
+            field('قيمة الديبوزت (EGP)', deposit,
+              type: const TextInputType.numberWithOptions(decimal: true)),
+          ],
+        ]),
+        const SizedBox(height: 16),
         AnimatedBuilder(animation: Listenable.merge([
           deposit, ...lines.expand((line) => [line.quantity, line.price]),
         ]), builder: (context, _) {
           final total = lines.fold<double>(0, (sum, line) => sum +
             (int.tryParse(line.quantity.text) ?? 0) * (double.tryParse(line.price.text) ?? 0));
           final paid = hasDeposit ? (double.tryParse(deposit.text) ?? 0) : 0.0;
-          return Card(child: Padding(padding: const EdgeInsets.all(14), child: Column(children: [
-            const FormSection(title: 'ملخص الطلب'),
-            ListTile(title: const Text('الإجمالي'), trailing: Text('${total.toStringAsFixed(2)} EGP')),
-            ListTile(title: const Text('الديبوزت المستلم'), trailing: Text('${paid.toStringAsFixed(2)} EGP')),
-            const Divider(height: 1),
-            ListTile(title: const Text('المتبقي عند التسليم'),
-              trailing: Text('${(total - paid).toStringAsFixed(2)} EGP')),
-          ])));
+          return Container(padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(color: appNavy,
+              borderRadius: BorderRadius.circular(22)),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              const Text('ملخص الطلب', style: TextStyle(color: Colors.white,
+                fontSize: 18, fontWeight: FontWeight.w800)),
+              const SizedBox(height: 16),
+              _totalRow('الإجمالي', total),
+              _totalRow('الديبوزت المستلم', paid),
+              const Divider(height: 24, color: Colors.white38),
+              _totalRow('المتبقي عند التسليم', total - paid, emphasized: true),
+            ]));
         }),
-      ],
+      ]),
+      bottomNavigationBar: SafeArea(top: false, child: Container(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+        decoration: const BoxDecoration(color: Colors.white,
+          border: Border(top: BorderSide(color: Color(0xffe5eae6)))),
+        child: SizedBox(height: 52, child: FilledButton.icon(
+          onPressed: busy || !snapshot.hasData || snapshot.data!.isEmpty ? null : submit,
+          icon: busy ? const SizedBox(width: 18, height: 18,
+            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) :
+            const Icon(Icons.check_circle_outline),
+          label: Text(busy ? 'جارٍ حفظ الطلب' : 'تسجيل الطلب'))))),
     ));
+
+  Widget _formCard(String title, String subtitle, List<Widget> children) =>
+    Card(margin: EdgeInsets.zero, child: Padding(
+      padding: const EdgeInsets.all(18),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Text(title, style: const TextStyle(fontSize: 17,
+          fontWeight: FontWeight.w800, color: appInk)),
+        const SizedBox(height: 4),
+        Text(subtitle, style: const TextStyle(fontSize: 12, color: appMuted)),
+        const SizedBox(height: 20),
+        ...children,
+      ])));
+
+  Widget _totalRow(String label, double value, {bool emphasized = false}) =>
+    Padding(padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(children: [
+        Expanded(child: Text(label, style: TextStyle(
+          color: emphasized ? Colors.white : Colors.white70,
+          fontWeight: emphasized ? FontWeight.w700 : FontWeight.normal))),
+        Text('${value.toStringAsFixed(2)} EGP',
+          style: TextStyle(color: Colors.white,
+            fontSize: emphasized ? 17 : 14,
+            fontWeight: FontWeight.w800)),
+      ]));
 }
