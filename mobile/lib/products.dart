@@ -63,6 +63,15 @@ class _SimpleProductPageState extends State<SimpleProductPage> {
   late Future<List<Json>> materials = loadMaterials();
   Future<List<Json>> loadMaterials() async => rows(await widget.api.get('/api/materials'));
   bool busy = false;
+  void addMaterial(Json material) => setState(() {
+    if (ingredients.any((line) => line.materialId == str(material['id']))) return;
+    final line = ingredients.firstWhere((entry) => entry.materialId == null,
+      orElse: () { final added = _Ingredient(); ingredients.add(added); return added; });
+    line.materialId = str(material['id']);
+    if (str(material['unit']).toLowerCase() != 'ml' && line.quantity.text.isEmpty) {
+      line.quantity.text = '1';
+    }
+  });
   @override
   void dispose() {
     name.dispose(); price.dispose();
@@ -100,18 +109,36 @@ class _SimpleProductPageState extends State<SimpleProductPage> {
         field('اسم العطر وحجمه', name),
         field('سعر البيع (EGP)', price, type: TextInputType.number),
         const Padding(padding: EdgeInsets.symmetric(vertical: 12),
-          child: Text('الخامات المطلوبة للعطر الواحد؛ تُخصم عند البيع')),
+          child: Text('اضغط على الخامة لإضافتها، ثم حدد كمية القطعة الواحدة التي تُخصم عند البيع.')),
         if (snapshot.hasError) Text('تعذر تحميل الخامات: ${snapshot.error}'),
         if (snapshot.hasData) ...[
           if (snapshot.data!.isEmpty) const ListTile(title: Text('أضف خامات للمخزون أولًا')),
+          Card(child: Padding(padding: const EdgeInsets.all(14), child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text('إضافة سريعة من المخزون', style: TextStyle(fontWeight: FontWeight.w800)),
+              const SizedBox(height: 10),
+              Wrap(spacing: 8, runSpacing: 8, children: [for (final material in snapshot.data!)
+                ActionChip(label: Text('${ingredients.any((line) => line.materialId == str(material['id'])) ? '✓' : '+'} ${material['name']} · ${material['unit']}'),
+                  onPressed: busy || ingredients.any((line) => line.materialId == str(material['id'])) ||
+                    (ingredients.length >= 30 && ingredients.every((line) => line.materialId != null))
+                    ? null : () => addMaterial(material)),
+              ]),
+            ]))),
           for (var i = 0; i < ingredients.length; i++) Card(child: Padding(
             padding: const EdgeInsets.all(12), child: Column(children: [
               DropdownButtonFormField<String>(value: ingredients[i].materialId,
                 decoration: const InputDecoration(labelText: 'الخامة'),
-                items: snapshot.data!.map((m) => DropdownMenuItem(value: str(m['id']),
+                items: snapshot.data!.where((m) => !ingredients.any((line) =>
+                  line != ingredients[i] && line.materialId == str(m['id']))).map((m) => DropdownMenuItem(value: str(m['id']),
                   child: Text('${m['name']} (${m['unit']})'))).toList(),
-                onChanged: (value) => setState(() => ingredients[i].materialId = value)),
-              field('الكمية', ingredients[i].quantity, type: TextInputType.number),
+                onChanged: (value) => setState(() {
+                  ingredients[i].materialId = value;
+                  final selected = snapshot.data!.firstWhere((m) => str(m['id']) == value);
+                  if (str(selected['unit']).toLowerCase() != 'ml' && ingredients[i].quantity.text.isEmpty) {
+                    ingredients[i].quantity.text = '1';
+                  }
+                })),
+              field('الكمية (${snapshot.data!.where((m) => str(m['id']) == ingredients[i].materialId).map((m) => str(m['unit'])).firstOrNull ?? 'الوحدة'})', ingredients[i].quantity, type: TextInputType.number),
               if (ingredients.length > 1) TextButton(onPressed: () => setState(() => ingredients.removeAt(i).dispose()),
                 child: const Text('إزالة الخامة')),
             ]))),

@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
     let result;
     try {
       result = await db.$transaction(async (tx) => {
-      const product = await tx.product.create({ data: { id: productId, storeId: session.storeId, title: input.name } });
+      const product = await tx.product.create({ data: { id: productId, storeId: session.storeId, title: input.name, status: "ACTIVE" } });
       const variant = await tx.productVariant.create({ data: { storeId: session.storeId, productId: product.id, title: input.name, price: new Prisma.Decimal(Math.round(input.price * 100)).div(100) } });
       const recipe = await tx.recipe.create({ data: { storeId: session.storeId, variantId: variant.id, name: input.name } });
       await tx.recipeVersion.create({ data: { storeId: session.storeId, recipeId: recipe.id, version: 1, isCurrent: true, items: { create: input.materials.map((item) => ({ materialId: item.materialId, quantity: item.quantity, unit: units.get(item.materialId)! })) } } });

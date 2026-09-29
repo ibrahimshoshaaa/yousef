@@ -3,6 +3,7 @@ import { getProduct } from "@/services/product.service";
 import { requireAuth, getStoreId } from "@/lib/auth-helpers";
 import { can } from "@/lib/rbac";
 import { db } from "@/lib/db";
+import { activeProductStatus } from "@/lib/active-product";
 
 export async function GET(
   _req: NextRequest,
@@ -43,7 +44,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     const { id } = await params;
     const product = await db.product.findFirst({
-      where: { id, storeId: getStoreId(session), NOT: { status: "ARCHIVED" } },
+      where: { id, storeId: getStoreId(session), ...activeProductStatus },
       select: { id: true, shopifyId: true },
     });
     if (!product) return NextResponse.json({ error: "المنتج غير موجود" }, { status: 404 });

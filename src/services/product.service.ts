@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { Prisma } from "@prisma/client";
 import { getRecipeVersionCost } from "@/services/recipe.service";
 import { isCostingEnabled } from "@/lib/settings";
+import { activeProductStatus } from "@/lib/active-product";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -38,17 +39,17 @@ export async function listProducts(
 ) {
   const where: Prisma.ProductWhereInput = {
     storeId,
-    NOT: { status: "ARCHIVED" },
+    ...activeProductStatus,
     ...(opts.search
       ? {
-          OR: [
+          AND: [{ OR: [
             { title: { contains: opts.search, mode: "insensitive" } },
             {
               variants: {
                 some: { sku: { contains: opts.search, mode: "insensitive" } },
               },
             },
-          ],
+          ] }],
         }
       : {}),
   };

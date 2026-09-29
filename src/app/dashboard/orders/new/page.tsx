@@ -3,12 +3,13 @@ import { requireAuth } from "@/lib/auth-helpers";
 import { can } from "@/lib/rbac";
 import { db } from "@/lib/db";
 import { ManualSaleForm } from "@/components/orders/ManualSaleForm";
+import { activeProductStatus } from "@/lib/active-product";
 
 export default async function NewManualSalePage() {
   const session = await requireAuth();
   if (!can(session.role, "orders.write")) throw new Error("Forbidden");
   const variants = await db.productVariant.findMany({
-    where: { storeId: session.storeId, active: true },
+    where: { storeId: session.storeId, active: true, product: activeProductStatus },
     select: { id: true, title: true, price: true, product: { select: { title: true } } },
     orderBy: { product: { title: "asc" } },
   });
