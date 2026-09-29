@@ -39,10 +39,8 @@ class _OrdersPageState extends State<OrdersPage> {
     if (!snapshot.hasData && !snapshot.hasError) return const PageSkeleton();
     final body = <Widget>[
       Row(children: [
-        const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start,
-          children: [Text('الطلبات', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
-            Text('تابع كل طلب من مكان واحد',
-              style: TextStyle(color: Color(0xff718079), fontSize: 13))])),
+        const Expanded(child: PageIntro(title: 'الطلبات',
+          subtitle: 'تابع التجهيز والشحن والتحصيل', icon: Icons.receipt_long_outlined)),
         if (widget.canWrite) FilledButton.icon(onPressed: newOrder,
           icon: const Icon(Icons.add, size: 19), label: const Text('طلب جديد')),
       ]),
@@ -234,7 +232,8 @@ class _NewOrderPageState extends State<NewOrderPage> {
     future: variants, builder: (context, snapshot) => FormScaffold(
       title: 'إضافة طلب', busy: busy, onSubmit: submit,
       children: [
-        if (!snapshot.hasData) const LinearProgressIndicator(),
+        const FormSection(title: 'الأصناف', subtitle: 'اختر المنتج والعدد والسعر لكل صنف.'),
+        if (!snapshot.hasData && !snapshot.hasError) const LinearProgressIndicator(),
         if (snapshot.hasError) Text('تعذر تحميل المنتجات: ${snapshot.error}'),
         if (snapshot.hasData) ...[
           for (var i = 0; i < lines.length; i++) Card(child: Padding(
@@ -253,11 +252,29 @@ class _NewOrderPageState extends State<NewOrderPage> {
           TextButton.icon(onPressed: lines.length >= 30 ? null : () => setState(() => lines.add(_OrderLine())),
             icon: const Icon(Icons.add), label: const Text('إضافة صنف')),
         ],
+        const SizedBox(height: 12),
+        const FormSection(title: 'بيانات العميل', subtitle: 'الاسم والهاتف والعنوان المطلوب للشحن.'),
         field('اسم العميل', name), field('رقم الهاتف', phone, type: TextInputType.phone),
         field('عنوان التوصيل', address, lines: 3),
+        const FormSection(title: 'التحصيل', subtitle: 'يُسجّل الديبوزت فور استلامه.'),
         SwitchListTile(value: hasDeposit, onChanged: (value) => setState(() => hasDeposit = value),
           title: const Text('العميل دفع ديبوزت')),
         if (hasDeposit) field('قيمة الديبوزت', deposit, type: TextInputType.number),
+        AnimatedBuilder(animation: Listenable.merge([
+          deposit, ...lines.expand((line) => [line.quantity, line.price]),
+        ]), builder: (context, _) {
+          final total = lines.fold<double>(0, (sum, line) => sum +
+            (int.tryParse(line.quantity.text) ?? 0) * (double.tryParse(line.price.text) ?? 0));
+          final paid = hasDeposit ? (double.tryParse(deposit.text) ?? 0) : 0.0;
+          return Card(child: Padding(padding: const EdgeInsets.all(14), child: Column(children: [
+            const FormSection(title: 'ملخص الطلب'),
+            ListTile(title: const Text('الإجمالي'), trailing: Text('${total.toStringAsFixed(2)} EGP')),
+            ListTile(title: const Text('الديبوزت المستلم'), trailing: Text('${paid.toStringAsFixed(2)} EGP')),
+            const Divider(height: 1),
+            ListTile(title: const Text('المتبقي عند التسليم'),
+              trailing: Text('${(total - paid).toStringAsFixed(2)} EGP')),
+          ])));
+        }),
       ],
     ));
 }
