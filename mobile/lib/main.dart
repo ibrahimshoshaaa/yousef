@@ -23,17 +23,13 @@ class PerfumeErpApp extends StatefulWidget {
   State<PerfumeErpApp> createState() => _PerfumeErpAppState();
 }
 
-class _PerfumeErpAppState extends State<PerfumeErpApp> with WidgetsBindingObserver {
+class _PerfumeErpAppState extends State<PerfumeErpApp> {
   final api = ErpApi();
   bool? signedIn;
-  bool wasBackgrounded = false;
-  bool showResumeSplash = false;
-  int splashGeneration = 0;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
     _restoreSession();
   }
 
@@ -42,29 +38,6 @@ class _PerfumeErpAppState extends State<PerfumeErpApp> with WidgetsBindingObserv
     await Future<void>.delayed(const Duration(milliseconds: 1300));
     final value = await session;
     if (mounted) setState(() => signedIn = value);
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused || state == AppLifecycleState.hidden) {
-      wasBackgrounded = true;
-    } else if (state == AppLifecycleState.resumed && wasBackgrounded) {
-      wasBackgrounded = false;
-      if (signedIn == null) return;
-      final generation = ++splashGeneration;
-      setState(() => showResumeSplash = true);
-      Future<void>.delayed(const Duration(milliseconds: 1100), () {
-        if (mounted && generation == splashGeneration) {
-          setState(() => showResumeSplash = false);
-        }
-      });
-    }
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
   }
 
   @override
@@ -120,10 +93,7 @@ class _PerfumeErpAppState extends State<PerfumeErpApp> with WidgetsBindingObserv
         ),
         builder: (context, child) => Directionality(
           textDirection: TextDirection.rtl,
-          child: Stack(children: [
-            child!,
-            if (showResumeSplash) const Positioned.fill(child: AuraicSplash()),
-          ]),
+          child: child!,
         ),
         home: signedIn == null
             ? const AuraicSplash()
