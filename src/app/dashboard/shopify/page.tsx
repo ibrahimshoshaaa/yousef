@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { getConnectionStatus } from "@/services/shopify/connection.service";
 import { ConnectShopifyForm } from "@/components/shopify/ConnectShopifyForm";
 import { SyncActions, RetryWebhookButton } from "@/components/shopify/SyncActions";
+import { SHOPIFY_FULFILLMENT_SCOPES } from "@/lib/config";
 
 async function getDevStoreId() {
   const session = await requireAuth();
@@ -55,6 +56,9 @@ async function ShopifyStatus({
     await getConnectionStatus(storeId);
 
   const isConnected = connection?.status === "CONNECTED";
+  const grantedScopes = new Set(connection?.scope?.split(",").map(scope => scope.trim()) ?? []);
+  const missingFulfillmentScopes = SHOPIFY_FULFILLMENT_SCOPES.filter(scope => !grantedScopes.has(scope));
+  const requestedScopes = [...new Set([...(process.env.SHOPIFY_SCOPES?.split(",").map(scope => scope.trim()).filter(Boolean) ?? []), ...SHOPIFY_FULFILLMENT_SCOPES])];
 
   return (
     <div className="space-y-6">
@@ -104,6 +108,14 @@ async function ShopifyStatus({
             {connection.lastError}
           </p>
         )}
+
+        {isConnected && <div className={`mt-4 rounded-xl p-4 text-sm ${missingFulfillmentScopes.length ? "bg-amber-50 text-amber-950" : "bg-emerald-50 text-emerald-900"}`}>
+          <p className="font-semibold">{missingFulfillmentScopes.length ? "صلاحيات إدارة شحن الطلبات ناقصة" : "صلاحيات شحن الطلبات مفعّلة"}</p>
+          {missingFulfillmentScopes.length > 0 && <>
+            <p className="mt-2">الصلاحيات التي منحها Shopify للمتجر لا تشمل: <code dir="ltr" className="break-all">{missingFulfillmentScopes.join(", ")}</code></p>
+            <p className="mt-2">راجع صلاحيات نسخة التطبيق في Shopify، ثم أعد ربط المتجر هنا. الصلاحيات المطلوبة حاليًا من الـERP: <code dir="ltr" className="break-all">{requestedScopes.join(", ")}</code></p>
+          </>}
+        </div>}
 
         {isConnected && (
           <div className="mt-6 grid gap-4 sm:grid-cols-3">
