@@ -54,6 +54,24 @@ test('mobile login, tenant access, and revocable logout through real HTTP routes
       const me = await fetch(`${url}/api/mobile/me`, { headers });
       assert.equal(me.status, 200);
       assert.equal((await me.json()).data.store.name, store.name);
+      const catalogProduct = await db.product.create({ data: {
+        storeId: store.id, title: 'Archived perfume', status: 'ACTIVE',
+        variants: { create: { storeId: store.id, title: '30 ml', price: 450 } },
+      } });
+      const beforeArchive = await fetch(`${url}/api/mobile/catalog`, { headers });
+      assert.equal(beforeArchive.status, 200);
+      assert.equal((await beforeArchive.json()).data.length, 1);
+      assert.equal((await fetch(`${url}/api/products/${catalogProduct.id}`, {
+        method: 'DELETE', headers,
+      })).status, 200);
+      assert.equal((await db.product.findUnique({ where: { id: catalogProduct.id } })).status, 'ARCHIVED');
+      const afterArchive = await fetch(`${url}/api/mobile/catalog`, { headers });
+      assert.deepEqual((await afterArchive.json()).data, []);
+      const visibleProducts = await fetch(`${url}/api/products`, { headers });
+      assert.deepEqual((await visibleProducts.json()).data, []);
+      assert.equal((await fetch(`${url}/api/products/${catalogProduct.id}`, {
+        method: 'DELETE', headers,
+      })).status, 404);
       const orders = await fetch(`${url}/api/mobile/orders`, { headers });
       assert.equal(orders.status, 200);
       assert.equal((await orders.json()).count, 0);

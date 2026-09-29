@@ -38,6 +38,7 @@ export async function listProducts(
 ) {
   const where: Prisma.ProductWhereInput = {
     storeId,
+    NOT: { status: "ARCHIVED" },
     ...(opts.search
       ? {
           OR: [

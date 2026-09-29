@@ -30,6 +30,7 @@ class ErpApi {
       _request('PUT', path, body: body);
   Future<dynamic> patch(String path, Map<String, dynamic> body) =>
       _request('PATCH', path, body: body);
+  Future<dynamic> delete(String path) => _request('DELETE', path);
 
   Future<void> login(String email, String password) async {
     final result = await post('/api/mobile/auth/login', {
@@ -65,6 +66,8 @@ class ErpApi {
             ? _client.patch(uri, headers: headers, body: jsonEncode(body))
         : method == 'PUT'
             ? _client.put(uri, headers: headers, body: jsonEncode(body))
+        : method == 'DELETE'
+            ? _client.delete(uri, headers: headers)
             : _client.post(uri, headers: headers, body: jsonEncode(body)))
         .timeout(Duration(seconds: path.endsWith('/sync') ? 120 : 30));
     dynamic decoded;

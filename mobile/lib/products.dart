@@ -14,20 +14,29 @@ class ProductsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) => DataView(api: api, path: '/api/products',
     title: 'المنتجات', subtitle: 'الأحجام والوصفات وربط Shopify', icon: Icons.inventory_2_outlined,
-    action: canWrite ? (context, reload) => Wrap(spacing: 8, children: [
-      FilledButton.icon(onPressed: () async {
+    action: canWrite ? (context, reload) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      SizedBox(height: 52, child: FilledButton.icon(onPressed: () async {
         final saved = await openPage<bool>(context, SimpleProductPage(api: api));
         if (saved == true) reload();
-      }, icon: const Icon(Icons.add), label: const Text('إضافة منتج بوصفة')),
-      TextButton(onPressed: () async {
+      }, icon: const Icon(Icons.add_circle_outline), label: const Text('إضافة منتج بوصفة'))),
+      const SizedBox(height: 8),
+      Align(alignment: AlignmentDirectional.centerStart, child: TextButton.icon(onPressed: () async {
         final saved = await openPage<bool>(context, ProductForm(api: api));
         if (saved == true) reload();
-      }, child: const Text('منتج متقدم')),
+      }, icon: const Icon(Icons.tune), label: const Text('إضافة منتج بأحجام متعددة'))),
     ]) : null,
-    item: (context, product, reload) => Card(child: ListTile(
-      title: Text(str(product['title'])),
-      subtitle: Text('${(product['variants'] as List?)?.length ?? 0} أحجام'),
-      trailing: const Icon(Icons.chevron_left),
+    item: (context, product, reload) => Card(margin: const EdgeInsets.only(bottom: 14),
+      child: ListTile(contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+      leading: Container(width: 44, height: 44, alignment: Alignment.center,
+        decoration: BoxDecoration(color: const Color(0xffe5eef3),
+          borderRadius: BorderRadius.circular(13)),
+        child: const Icon(Icons.inventory_2_outlined, color: appNavy)),
+      title: Text(str(product['title']), style: const TextStyle(
+        fontSize: 17, fontWeight: FontWeight.w800)),
+      subtitle: Padding(padding: const EdgeInsets.only(top: 6), child: Text(
+        '${(product['variants'] as List?)?.length ?? 0} أحجام · '
+        '${product['shopifyId'] == null ? 'محلي' : 'مرتبط بـ Shopify'}')),
+      trailing: const Icon(Icons.chevron_left, color: appNavy),
       onTap: () async { await openPage(context, ProductDetail(api: api,
         product: product, canWrite: canWrite, canShopify: canShopify)); reload(); },
     )));
@@ -167,6 +176,18 @@ class _ProductDetailState extends State<ProductDetail> {
   Future<Json> fetch() async => json((await widget.api.get('/api/products/${widget.product['id']}'))['data']);
   void reload() => setState(() => detail = fetch());
 
+  Future<void> archive(Json product) async {
+    final linked = product['shopifyId'] != null;
+    if (!await confirm(context, linked
+      ? 'إخفاء المنتج من ERP ومن الطلبات الجديدة؟ سيظل منشورًا في Shopify حتى توقف نشره من المتجر.'
+      : 'إخفاء المنتج من القائمة والطلبات الجديدة؟ ستبقى بيانات الطلبات السابقة محفوظة.')) return;
+    try {
+      await perform(context, () => widget.api.delete('/api/products/${product['id']}'),
+        success: 'تمت أرشفة المنتج');
+      if (mounted) Navigator.pop(context, true);
+    } catch (_) { /* Error shown by helper. */ }
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: Text(str(widget.product['title']))),
@@ -179,33 +200,84 @@ class _ProductDetailState extends State<ProductDetail> {
         child: ListView(padding: const EdgeInsets.all(16), children: [
       PageIntro(title: str(product['title']), subtitle: 'الأحجام والوصفات وحالة النشر', icon: Icons.inventory_2_outlined),
       const SizedBox(height: 16),
-      Card(child: ListTile(title: Text(str(product['title'])),
-        subtitle: Text('معرّف Shopify: ${str(product['shopifyId']).isEmpty ? 'لم يُنشر' : str(product['shopifyId'])}'))),
-      if (widget.canShopify && product['shopifyId'] == null) FilledButton.icon(
+      Card(child: Padding(padding: const EdgeInsets.all(18), child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Text('حالة المنتج', style: TextStyle(fontSize: 16,
+          fontWeight: FontWeight.w800, color: appInk)),
+        const SizedBox(height: 10),
+        StatusPill(label: product['shopifyId'] == null ? 'محلي · غير منشور' :
+          'مرتبط بـ Shopify', color: product['shopifyId'] == null ? appMuted : appNavy),
+        const SizedBox(height: 8),
+        Text('${(product['variants'] as List).length} أحجام',
+          style: const TextStyle(color: appMuted)),
+      ]))),
+      const SizedBox(height: 14),
+      if (widget.canShopify && product['shopifyId'] == null) SizedBox(
+        width: double.infinity, child: FilledButton.icon(
         onPressed: () async {
           if (!await confirm(context, 'نشر المنتج في Shopify؟ الخدمة تدعم منتجًا بحجم واحد.')) return;
           try { await perform(context, () => widget.api.post('/api/products/${product['id']}/publish-shopify', {})); reload(); }
           catch (_) { /* Error shown by helper. */ }
-        }, icon: const Icon(Icons.cloud_upload_outlined), label: const Text('نشر في Shopify')),
-      for (final v in (product['variants'] as List).map(json)) Card(child: ExpansionTile(
-        title: Text(str(v['title'])), subtitle: Text('${str(v['price'])} EGP · ${str(v['sku'])}'),
+        }, icon: const Icon(Icons.cloud_upload_outlined), label: const Text('نشر في Shopify'))),
+      const SizedBox(height: 20),
+      const Text('الأحجام والوصفات', style: TextStyle(fontSize: 19,
+        fontWeight: FontWeight.w800, color: appInk)),
+      const SizedBox(height: 12),
+      for (final v in (product['variants'] as List).map(json)) Card(
+        margin: const EdgeInsets.only(bottom: 14), child: ExpansionTile(
+        tilePadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+        childrenPadding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
+        title: Text(str(v['title']), style: const TextStyle(fontSize: 17,
+          fontWeight: FontWeight.w800)),
+        subtitle: Padding(padding: const EdgeInsets.only(top: 5),
+          child: Text('${str(v['price'])} EGP${str(v['sku']).isEmpty ? '' : ' · ${str(v['sku'])}'}')),
         children: [
-          if (v['cost'] != null) ListTile(title: const Text('تكلفة التصنيع'), subtitle: Text('${v['cost']} EGP')),
-          if (v['recipes'] is List && (v['recipes'] as List).isNotEmpty)
-            const ListTile(title: Text('الوصفة مسجلة'), trailing: Icon(Icons.check_circle_outline)),
+          const Divider(),
+          if (v['costing'] is Map && (v['costing'] as Map)['estimatedCost'] != null)
+            ListTile(title: const Text('تكلفة التصنيع المقدرة'),
+              trailing: Text('${(v['costing'] as Map)['estimatedCost']} EGP')),
+          if (v['recipes'] is List && (v['recipes'] as List).isNotEmpty) ...[
+            const Align(alignment: AlignmentDirectional.centerStart,
+              child: Text('الوصفة الحالية', style: TextStyle(
+                fontWeight: FontWeight.w800, color: appInk))),
+            const SizedBox(height: 8),
+            for (final recipe in (v['recipes'] as List).map(json)) ...[
+              for (final version in (recipe['versions'] as List).map(json))
+                for (final item in (version['items'] as List).map(json))
+                  ListTile(dense: true,
+                    title: Text(str((item['material'] as Map?)?['name'])),
+                    trailing: Text('${str(item['quantity'])} ${str(item['unit'])}')),
+              if (widget.canWrite) SizedBox(width: double.infinity,
+                child: OutlinedButton.icon(onPressed: () async {
+                  final saved = await openPage<bool>(context, RecipeForm(
+                    api: widget.api, recipeId: str(recipe['id'])));
+                  if (saved == true) reload();
+                }, icon: const Icon(Icons.edit_outlined),
+                  label: const Text('تعديل الوصفة'))),
+              const SizedBox(height: 8),
+            ],
+          ],
           if (widget.canWrite && (v['recipes'] is! List || (v['recipes'] as List).isEmpty))
-            ListTile(title: const Text('أضف وصفة ليتم خصم الخامات عند البيع'),
-              trailing: const Icon(Icons.chevron_left),
-              onTap: () async { final saved = await openPage<bool>(context,
-                RecipeForm(api: widget.api, initialVariantId: str(v['id']))); if (saved == true) reload(); }),
+            SizedBox(width: double.infinity, child: OutlinedButton.icon(
+              icon: const Icon(Icons.add), label: const Text('إضافة وصفة لهذا الحجم'),
+              onPressed: () async { final saved = await openPage<bool>(context,
+                RecipeForm(api: widget.api, initialVariantId: str(v['id']))); if (saved == true) reload(); })),
         ],
       )),
-      if (widget.canWrite) OutlinedButton.icon(onPressed: () async {
+      if (widget.canWrite) SizedBox(width: double.infinity,
+        child: OutlinedButton.icon(onPressed: () async {
         final saved = await openPage<bool>(context,
           VariantForm(api: widget.api, productId: str(product['id'])));
         if (saved == true) reload();
       },
-        icon: const Icon(Icons.add), label: const Text('إضافة حجم')),
+        icon: const Icon(Icons.add), label: const Text('إضافة حجم'))),
+      if (widget.canWrite) ...[
+        const SizedBox(height: 24),
+        const Divider(),
+        TextButton.icon(onPressed: () => archive(product),
+          icon: const Icon(Icons.delete_outline), label: const Text('حذف المنتج من ERP'),
+          style: TextButton.styleFrom(foregroundColor: const Color(0xffa33146))),
+      ],
     ]));
     }),
   );

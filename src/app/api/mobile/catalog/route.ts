@@ -8,7 +8,7 @@ export async function GET() {
     const session = await requireAuth();
     if (!can(session.role, "orders.write") && !can(session.role, "recipes.read")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     const variants = await db.productVariant.findMany({
-      where: { storeId: session.storeId, active: true },
+      where: { storeId: session.storeId, active: true, product: { NOT: { status: "ARCHIVED" } } },
       select: { id: true, title: true, price: true, product: { select: { title: true } } },
       orderBy: { product: { title: "asc" } },
     });
