@@ -32,6 +32,11 @@ jobs:
         run: python3 tool/ensure_android_internet.py
       - name: Fetch packages
         run: flutter pub get
+      - name: Apply Auraic app icon and splash
+        run: |
+          dart run flutter_launcher_icons
+          dart run flutter_native_splash:create
+          python3 tool/set_android_app_label.py
       - name: Check Dart code
         run: flutter analyze --no-fatal-infos
       - name: Run Flutter tests

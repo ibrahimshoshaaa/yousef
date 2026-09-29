@@ -1,5 +1,5 @@
 name: perfume_erp
-description: Perfume ERP mobile client
+description: Auraic mobile client
 publish_to: none
 version: 0.1.0+1
 environment:
@@ -15,5 +15,23 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.14.4
+  flutter_native_splash: ^2.4.8
 flutter:
   uses-material-design: true
+  assets:
+    - assets/auraic-logo.jpg
+    - assets/auraic-icon.jpg
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: assets/auraic-icon.jpg
+
+flutter_native_splash:
+  color: "#191735"
+  android: true
+  ios: false
+  web: false
+  android_12:
+    color: "#191735"
