@@ -34,7 +34,7 @@ class _RecipeDetailState extends State<RecipeDetail> {
   @override
   Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: const Text('تفاصيل الوصفة')),
     body: FutureBuilder<dynamic>(future: record, builder: (context, snapshot) {
-      if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+      if (!snapshot.hasData) return const PageSkeleton();
       final recipe = json(snapshot.data['data']);
       final versions = (recipe['versions'] as List).map(json).toList();
       return ListView(padding: const EdgeInsets.all(16), children: [
