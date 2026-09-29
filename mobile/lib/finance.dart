@@ -18,9 +18,9 @@ class _ExpensesPageState extends State<ExpensesPage> {
   void reload() => setState(() => expenses = getExpenses());
   @override
   Widget build(BuildContext context) => FutureBuilder<List<Json>>(future: expenses, builder: (context, snapshot) {
-    if (!snapshot.hasData) return Center(child: snapshot.hasError
+    if (!snapshot.hasData) return snapshot.hasError
       ? TextButton(onPressed: reload, child: Text('تعذر التحميل: ${snapshot.error}'))
-      : const CircularProgressIndicator());
+      : const PageSkeleton();
     final entries = snapshot.data!;
     final categories = {for (final e in entries) str(e['categoryId']): str(json(e['category'])['name'])};
     final visible = category == null ? entries : entries.where((e) => e['categoryId'] == category).toList();
