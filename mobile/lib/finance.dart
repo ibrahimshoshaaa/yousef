@@ -3,6 +3,25 @@ import 'package:flutter/material.dart';
 import 'api.dart';
 import 'ui.dart';
 
+String expenseCategoryName(String value) => switch (value) {
+  'Material Purchases' => 'شراء خامات',
+  'Return Cost' => 'تكلفة مرتجع',
+  _ => value,
+};
+
+String expenseSummary(String value) {
+  if (value.startsWith('Return for order ')) return 'تكلفة إرجاع طلب';
+  if (value.startsWith('Purchase: ')) return 'شراء خامات · ${value.substring(10)}';
+  return value;
+}
+
+String expenseDate(dynamic value) {
+  final parsed = DateTime.tryParse(str(value));
+  if (parsed == null) return str(value);
+  final local = parsed.toLocal();
+  return '${local.day.toString().padLeft(2, '0')}/${local.month.toString().padLeft(2, '0')}/${local.year}';
+}
+
 class ExpensesPage extends StatefulWidget {
   const ExpensesPage({required this.api, required this.canWrite, super.key});
   final ErpApi api;
@@ -22,41 +41,86 @@ class _ExpensesPageState extends State<ExpensesPage> {
       ? TextButton(onPressed: reload, child: Text('تعذر التحميل: ${snapshot.error}'))
       : const PageSkeleton();
     final entries = snapshot.data!;
-    final categories = {for (final e in entries) str(e['categoryId']): str(json(e['category'])['name'])};
+    final categories = {for (final e in entries)
+      str(e['categoryId']): expenseCategoryName(str(json(e['category'])['name']))};
     final visible = category == null ? entries : entries.where((e) => e['categoryId'] == category).toList();
     final total = visible.fold<double>(0, (sum, e) => sum + amount(e['amount']));
     return RefreshIndicator(onRefresh: () async { reload(); await expenses; },
-      child: ListView(padding: const EdgeInsets.all(16), children: [
+      child: ListView(padding: const EdgeInsets.fromLTRB(16, 18, 16, 30), children: [
         const PageIntro(title: 'المصروفات', subtitle: 'تابع التكاليف حسب الفئة والتاريخ', icon: Icons.payments_outlined),
-        const SizedBox(height: 14),
-        Row(children: [Expanded(child: Card(child: Padding(
-          padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start,
-            children: [const Text('إجمالي المصروفات', style: TextStyle(color: appMuted)),
-              const SizedBox(height: 6), Text('${total.toStringAsFixed(2)} EGP',
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: appInk)),
-              Text('${visible.length} مصروف', style: const TextStyle(fontSize: 12, color: appMuted))])))),
-          if (widget.canWrite) Padding(padding: const EdgeInsets.only(right: 10),
-            child: FilledButton.icon(onPressed: () async {
-              final added = await showModalBottomSheet<bool>(context: context,
-                isScrollControlled: true, useSafeArea: true, backgroundColor: appCanvas,
-                builder: (_) => FractionallySizedBox(heightFactor: 0.92,
-                  child: ExpenseForm(api: widget.api)));
-              if (added == true) reload();
-            }, icon: const Icon(Icons.add), label: const Text('إضافة'))),
-        ]),
-        const SizedBox(height: 14),
+        const SizedBox(height: 20),
+        Container(padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(color: appNavy, borderRadius: BorderRadius.circular(20)),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('إجمالي المصروفات', style: TextStyle(color: Color(0xffc5dae4), fontSize: 13)),
+            const SizedBox(height: 9),
+            Text('${total.toStringAsFixed(2)} EGP', textDirection: TextDirection.ltr,
+              style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 10),
+            Text('${visible.length} مصروف${category == null ? '' : ' في الفئة المحددة'}',
+              style: const TextStyle(color: Color(0xffc5dae4), fontSize: 12)),
+          ])),
+        const SizedBox(height: 18),
+        if (widget.canWrite) ...[
+          SizedBox(width: double.infinity, child: FilledButton.icon(onPressed: () async {
+            final added = await showModalBottomSheet<bool>(context: context,
+              isScrollControlled: true, useSafeArea: true,
+              backgroundColor: Colors.white,
+              clipBehavior: Clip.antiAlias,
+              shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.vertical(top: Radius.circular(26))),
+              builder: (_) => FractionallySizedBox(heightFactor: 0.90,
+                child: ExpenseForm(api: widget.api)));
+            if (added == true) reload();
+          }, icon: const Icon(Icons.add), label: const Text('إضافة مصروف'))),
+          const SizedBox(height: 18),
+        ],
         DropdownButtonFormField<String>(value: category,
           decoration: const InputDecoration(labelText: 'تصفية بالفئة'),
           items: [const DropdownMenuItem(value: null, child: Text('كل الفئات')),
             ...categories.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value)))],
           onChanged: (value) => setState(() => category = value)),
-        const SizedBox(height: 16),
+        const SizedBox(height: 24),
         const FormSection(title: 'سجل المصروفات'),
         if (visible.isEmpty) const Padding(padding: EdgeInsets.all(28),
           child: Center(child: Text('لا توجد مصروفات في هذه الفئة'))),
-        for (final e in visible) Card(child: ListTile(title: Text(str(json(e['category'])['name'])),
-          subtitle: Text('${str(e['description'])} · ${str(e['date'])}'),
-          trailing: Text('${str(e['amount'])} ${str(e['currency'])}'))),
+        for (final e in visible) Padding(padding: const EdgeInsets.only(bottom: 12),
+          child: Card(child: InkWell(
+            borderRadius: BorderRadius.circular(20),
+            onTap: () => showDialog<void>(context: context, builder: (dialogContext) => AlertDialog(
+              title: Text(expenseCategoryName(str(json(e['category'])['name']))),
+              content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start,
+                children: [Text('المبلغ: ${str(e['amount'])} ${str(e['currency'])}'),
+                  const SizedBox(height: 10), Text('التاريخ: ${expenseDate(e['date'])}'),
+                  if (str(e['description']).trim().isNotEmpty) ...[
+                    const SizedBox(height: 10), Text(str(e['description'])),
+                  ]]),
+              actions: [TextButton(onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('إغلاق'))])),
+            child: Padding(padding: const EdgeInsets.all(16), child: Row(children: [
+              Container(width: 42, height: 42,
+                decoration: BoxDecoration(color: const Color(0xffe8f0f5),
+                  borderRadius: BorderRadius.circular(12)),
+                child: const Icon(Icons.receipt_long_outlined, color: appNavy, size: 21)),
+              const SizedBox(width: 12),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(expenseCategoryName(str(json(e['category'])['name'])),
+                  maxLines: 1, overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.w800, color: appInk)),
+                if (str(e['description']).trim().isNotEmpty) ...[
+                  const SizedBox(height: 5),
+                  Text(expenseSummary(str(e['description'])), maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 12, color: appMuted)),
+                ],
+                const SizedBox(height: 6),
+                Text(expenseDate(e['date']), style: const TextStyle(fontSize: 11, color: appMuted)),
+              ])),
+              const SizedBox(width: 10),
+              Text('${amount(e['amount']).toStringAsFixed(2)}\n${str(e['currency'])}',
+                textDirection: TextDirection.ltr, textAlign: TextAlign.center,
+                style: const TextStyle(fontWeight: FontWeight.w800, color: appNavy, fontSize: 13)),
+            ]))))),
       ]));
   });
 }
@@ -116,24 +180,70 @@ class _ExpenseFormState extends State<ExpenseForm> {
 
   @override
   Widget build(BuildContext context) => FutureBuilder<List<Json>>(future: categories,
-    builder: (context, snapshot) => FormScaffold(title: 'إضافة مصروف', busy: busy, onSubmit: submit,
-      children: [
-        const FormSection(title: 'بيانات المصروف', subtitle: 'اختار فئة موجودة أو أنشئ فئة جديدة.'),
-        if (snapshot.hasError) Text('تعذر تحميل الفئات: ${snapshot.error}'),
-        if (snapshot.hasData) DropdownButtonFormField<String>(value: selected,
-          decoration: const InputDecoration(labelText: 'الفئة'),
-          items: snapshot.data!.where((e) => e['active'] != false)
-            .map((e) => DropdownMenuItem(value: str(e['id']), child: Text(str(e['name'])))).toList(),
-          onChanged: (value) => setState(() => selected = value)),
-        Align(alignment: Alignment.centerRight, child: OutlinedButton.icon(onPressed: createCategory,
-          icon: const Icon(Icons.create_new_folder_outlined), label: const Text('إضافة فئة جديدة'))),
-        field('المبلغ (EGP)', amountController, type: TextInputType.number),
-        field('الوصف', description),
-        ListTile(title: const Text('تاريخ المصروف'), subtitle: Text('${date.year}-${date.month}-${date.day}'),
-          onTap: () async { final chosen = await showDatePicker(context: context,
-            firstDate: DateTime(2020), lastDate: DateTime(2100), initialDate: date);
-            if (chosen != null) setState(() => date = chosen); }),
-      ]));
+    builder: (context, snapshot) => Scaffold(
+      backgroundColor: appCanvas,
+      body: Column(children: [
+        Container(color: Colors.white, padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+          child: Column(children: [
+            Container(width: 38, height: 4, decoration: BoxDecoration(
+              color: const Color(0xffcbd5da), borderRadius: BorderRadius.circular(4))),
+            const SizedBox(height: 18),
+            Row(children: [
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Text('إضافة مصروف', style: TextStyle(
+                  fontSize: 21, fontWeight: FontWeight.w800, color: appInk)),
+                const SizedBox(height: 4),
+                const Text('سجّل تفاصيل المصروف في مكان واحد',
+                  style: TextStyle(fontSize: 12, color: appMuted)),
+              ])),
+              IconButton(onPressed: () => Navigator.pop(context),
+                tooltip: 'إغلاق', icon: const Icon(Icons.close_rounded)),
+            ]),
+          ])),
+        Expanded(child: ListView(padding: const EdgeInsets.fromLTRB(16, 22, 16, 28), children: [
+          const FormSection(title: 'الفئة', subtitle: 'اختر فئة المصروف أو أضف فئة جديدة.'),
+          Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              if (snapshot.hasError) TextButton.icon(
+                onPressed: () => setState(() => categories = getCategories()),
+                icon: const Icon(Icons.refresh), label: const Text('تعذر تحميل الفئات، حاول مجددًا')),
+              if (!snapshot.hasData && !snapshot.hasError) const LinearProgressIndicator(),
+              if (snapshot.hasData) DropdownButtonFormField<String>(value: selected,
+                decoration: const InputDecoration(labelText: 'فئة المصروف'),
+                items: snapshot.data!.where((e) => e['active'] != false)
+                  .map((e) => DropdownMenuItem(value: str(e['id']),
+                    child: Text(expenseCategoryName(str(e['name']))))).toList(),
+                onChanged: (value) => setState(() => selected = value)),
+              const SizedBox(height: 16),
+              OutlinedButton.icon(onPressed: createCategory,
+                icon: const Icon(Icons.add_circle_outline),
+                label: const Text('إضافة فئة جديدة')),
+            ]))),
+          const SizedBox(height: 24),
+          const FormSection(title: 'تفاصيل المصروف'),
+          Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(children: [
+            field('المبلغ (EGP)', amountController, type: const TextInputType.numberWithOptions(decimal: true)),
+            field('الوصف', description, lines: 2),
+            const SizedBox(height: 6),
+            ListTile(contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.event_outlined, color: appNavy),
+              title: const Text('تاريخ المصروف'),
+              subtitle: Text(expenseDate(date)),
+              trailing: const Icon(Icons.chevron_left),
+              onTap: () async { final chosen = await showDatePicker(context: context,
+                firstDate: DateTime(2020), lastDate: DateTime(2100), initialDate: date);
+                if (chosen != null) setState(() => date = chosen); }),
+          ]))),
+        ])),
+      ]),
+      bottomNavigationBar: SafeArea(top: false, child: Container(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+        decoration: const BoxDecoration(color: Colors.white,
+          border: Border(top: BorderSide(color: Color(0xffe5eae6)))),
+        child: FilledButton(onPressed: busy ? null : submit,
+          child: Padding(padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Text(busy ? 'جارٍ الحفظ...' : 'حفظ المصروف'))))),
+    ));
 }
 
 class ReturnsPage extends StatelessWidget {
