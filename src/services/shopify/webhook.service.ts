@@ -120,6 +120,14 @@ async function dispatch(storeId: string, topic: SubscribedWebhookTopic, payload:
       return;
     }
 
+    case "PRODUCTS_DELETE": {
+      const gid = (payload.admin_graphql_api_id as string) ?? toGid("Product", payload.id);
+      await db.product.updateMany({
+        where: { storeId, shopifyId: gid }, data: { status: "ARCHIVED" },
+      });
+      return;
+    }
+
     case "APP_UNINSTALLED": {
       await disconnectStore(storeId);
       return;
