@@ -56,9 +56,43 @@ test('mobile login, tenant access, and revocable logout through real HTTP routes
       const orders = await fetch(`${url}/api/mobile/orders`, { headers });
       assert.equal(orders.status, 200);
       assert.equal((await orders.json()).count, 0);
-      const logout = await fetch(`${url}/api/mobile/auth/logout`, { method: 'POST', headers });
-      assert.equal(logout.status, 200);
+      const ownerEmail = `second-${store.id}@example.com`;
+      const ownerPassword = 'another-temporary-owner-password';
+      const createOwner = async currentPassword => fetch(`${url}/api/mobile/account/users`, {
+        method: 'POST', headers: { ...headers, 'content-type': 'application/json' },
+        body: JSON.stringify({ name: 'Second owner', email: ownerEmail,
+          password: ownerPassword, currentPassword }),
+      });
+      assert.equal((await createOwner('incorrect-password')).status, 403);
+      assert.equal((await createOwner(password)).status, 201);
+      assert.equal((await createOwner(password)).status, 409);
+      const users = await fetch(`${url}/api/mobile/account/users`, { headers });
+      assert.equal(users.status, 200);
+      const listed = (await users.json()).data;
+      assert.equal(listed.length, 2);
+      assert.ok(listed.every(user => user.role === 'OWNER' && !('passwordHash' in user)));
+      const secondLogin = await fetch(`${url}/api/mobile/auth/login`, {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ email: ownerEmail, password: ownerPassword }),
+      });
+      assert.equal(secondLogin.status, 200);
+      assert.equal((await secondLogin.json()).data.user.role, 'OWNER');
+      const changePassword = async currentPassword => fetch(`${url}/api/mobile/account/password`, {
+        method: 'POST', headers: { ...headers, 'content-type': 'application/json' },
+        body: JSON.stringify({ currentPassword, newPassword: 'changed-mobile-owner-password' }),
+      });
+      assert.equal((await changePassword('incorrect-password')).status, 403);
+      assert.equal((await changePassword(password)).status, 200);
       assert.equal((await fetch(`${url}/api/mobile/me`, { headers })).status, 401);
+      const newLogin = await fetch(`${url}/api/mobile/auth/login`, {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ email, password: 'changed-mobile-owner-password' }),
+      });
+      assert.equal(newLogin.status, 200);
+      const newHeaders = { authorization: `Bearer ${(await newLogin.json()).data.token}` };
+      const logout = await fetch(`${url}/api/mobile/auth/logout`, { method: 'POST', headers: newHeaders });
+      assert.equal(logout.status, 200);
+      assert.equal((await fetch(`${url}/api/mobile/me`, { headers: newHeaders })).status, 401);
     } finally {
       child.kill('SIGTERM');
       await delay(100);
