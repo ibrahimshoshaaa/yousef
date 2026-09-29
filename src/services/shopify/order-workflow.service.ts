@@ -34,14 +34,17 @@ export async function updateShopifyOrderStage(params: {
     const client = await getClientForStore(storeId);
     const state = stage === "SHIPPING" ? await client.fetchFulfillmentState(order.shopifyId) : await client.fetchDeliveryState(order.shopifyId);
     if (!state) throw new ShopifyWorkflowError("الطلب غير موجود في Shopify");
-    if (state.fulfillments.length >= 100 || ("fulfillmentOrders" in state && state.fulfillmentOrders.pageInfo.hasNextPage)) throw new ShopifyWorkflowError("الطلب يحتوي على شحنات كثيرة، راجعه في Shopify");
+    const fulfillmentOrders = "fulfillmentOrders" in state ? state.fulfillmentOrders as {
+      nodes: { id: string; status: string }[]; pageInfo: { hasNextPage: boolean };
+    } : null;
+    if (state.fulfillments.length >= 100 || fulfillmentOrders?.pageInfo.hasNextPage) throw new ShopifyWorkflowError("الطلب يحتوي على شحنات كثيرة، راجعه في Shopify");
 
     if (stage === "SHIPPING") {
       if (state.displayFulfillmentStatus !== "FULFILLED") {
-        if (!("fulfillmentOrders" in state)) throw new ShopifyWorkflowError("تعذر قراءة شحنات الطلب");
-        const open = state.fulfillmentOrders.nodes.filter(fo => fo.status === "OPEN");
+        if (!fulfillmentOrders) throw new ShopifyWorkflowError("تعذر قراءة شحنات الطلب");
+        const open = fulfillmentOrders.nodes.filter(fo => fo.status === "OPEN");
         if (!["UNFULFILLED", "PARTIALLY_FULFILLED"].includes(state.displayFulfillmentStatus) || !open.length ||
-            state.fulfillmentOrders.nodes.some(fo => !["OPEN", "CLOSED"].includes(fo.status))) {
+            fulfillmentOrders.nodes.some(fo => !["OPEN", "CLOSED"].includes(fo.status))) {
           throw new ShopifyWorkflowError("لا يمكن شحن الطلب كاملًا في حالته الحالية في Shopify");
         }
         for (const fo of open) await client.createFulfillment(fo.id);
