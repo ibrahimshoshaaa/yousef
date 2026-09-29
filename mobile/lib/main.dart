@@ -40,14 +40,14 @@ class _PerfumeErpAppState extends State<PerfumeErpApp> {
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xff173d34),
-            primary: const Color(0xff173d34),
+            seedColor: const Color(0xff123e57),
+            primary: const Color(0xff123e57),
             surface: Colors.white,
           ),
-          scaffoldBackgroundColor: const Color(0xfff5f6f4),
+          scaffoldBackgroundColor: const Color(0xfff5f6fa),
           appBarTheme: const AppBarTheme(
-            backgroundColor: Color(0xfff5f6f4),
-            foregroundColor: Color(0xff142720),
+            backgroundColor: Color(0xff123e57),
+            foregroundColor: Colors.white,
             elevation: 0,
             scrolledUnderElevation: 0,
             centerTitle: false,
@@ -86,7 +86,7 @@ class _PerfumeErpAppState extends State<PerfumeErpApp> {
           child: child!,
         ),
         home: signedIn == null
-            ? const Scaffold(body: Center(child: CircularProgressIndicator()))
+            ? const Scaffold(body: PageSkeleton())
             : signedIn!
                 ? ErpHome(api: api, onLogout: () => setState(() => signedIn = false))
                 : LoginPage(api: api, onLogin: () => setState(() => signedIn = true)),
@@ -129,39 +129,61 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        body: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(mainAxisSize: MainAxisSize.min, children: [
-                    const Icon(Icons.spa, size: 48),
-                    const SizedBox(height: 12),
-                    Text('Perfume ERP', style: Theme.of(context).textTheme.headlineMedium),
-                    const SizedBox(height: 24),
-                    TextField(controller: email, keyboardType: TextInputType.emailAddress,
-                      autofillHints: const [AutofillHints.email],
-                      decoration: const InputDecoration(labelText: 'البريد الإلكتروني')),
-                    TextField(controller: password, obscureText: true,
-                      autofillHints: const [AutofillHints.password],
-                      onSubmitted: (_) => busy ? null : submit(),
-                      decoration: const InputDecoration(labelText: 'كلمة المرور')),
-                    if (error != null) Padding(padding: const EdgeInsets.only(top: 12),
-                      child: Text(error!, style: TextStyle(color: Theme.of(context).colorScheme.error))),
-                    const SizedBox(height: 24),
-                    FilledButton(onPressed: busy ? null : submit,
-                      child: busy ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                                  : const Text('تسجيل الدخول')),
-                  ]),
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
+    body: SafeArea(child: LayoutBuilder(builder: (context, viewport) =>
+      SingleChildScrollView(child: ConstrainedBox(
+        constraints: BoxConstraints(minHeight: viewport.maxHeight),
+        child: Column(children: [
+          Container(width: double.infinity, padding: const EdgeInsets.fromLTRB(28, 48, 28, 50),
+            decoration: const BoxDecoration(color: Color(0xff123e57),
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(32))),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Container(width: 56, height: 56,
+                decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(16)),
+                child: const Icon(Icons.spa_rounded, color: Colors.white, size: 30)),
+              const SizedBox(height: 28),
+              const Text('Perfume ERP', textDirection: TextDirection.ltr,
+                style: TextStyle(color: Colors.white, fontSize: 30, fontWeight: FontWeight.w800)),
+              const SizedBox(height: 7),
+              const Text('كل شغل العطور في مكان واحد',
+                style: TextStyle(color: Color(0xffc8dce6), fontSize: 15)),
+            ])),
+          Padding(padding: const EdgeInsets.fromLTRB(20, 28, 20, 28),
+            child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 420),
+              child: Card(child: Padding(padding: const EdgeInsets.all(22),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                  const Text('أهلًا بعودتك', style: TextStyle(fontSize: 24,
+                    fontWeight: FontWeight.w800, color: Color(0xff142720))),
+                  const SizedBox(height: 4),
+                  const Text('سجّل دخولك لمتابعة الطلبات والمخزون',
+                    style: TextStyle(color: Color(0xff718079))),
+                  const SizedBox(height: 24),
+                  TextField(controller: email, keyboardType: TextInputType.emailAddress,
+                    autofillHints: const [AutofillHints.email],
+                    decoration: const InputDecoration(labelText: 'البريد الإلكتروني',
+                      prefixIcon: Icon(Icons.mail_outline_rounded))),
+                  const SizedBox(height: 14),
+                  TextField(controller: password, obscureText: true,
+                    autofillHints: const [AutofillHints.password],
+                    onSubmitted: (_) { if (!busy) submit(); },
+                    decoration: const InputDecoration(labelText: 'كلمة المرور',
+                      prefixIcon: Icon(Icons.lock_outline_rounded))),
+                  if (error != null) Padding(padding: const EdgeInsets.only(top: 16),
+                    child: Text(error!, style: TextStyle(
+                      color: Theme.of(context).colorScheme.error))),
+                  const SizedBox(height: 24),
+                  FilledButton(onPressed: busy ? null : submit,
+                    child: Padding(padding: const EdgeInsets.symmetric(vertical: 7),
+                      child: busy ? const SizedBox(height: 20, width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2,
+                          color: Colors.white))
+                        : const Text('تسجيل الدخول', style: TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.w700)))),
+                ]))))),
+        ]),
+      )),
+    )),
+  );
 }
 
 class ErpHome extends StatefulWidget {
@@ -193,12 +215,12 @@ class _ErpHomeState extends State<ErpHome> {
       Icons.bar_chart_outlined, Icons.settings_outlined, Icons.store_outlined,
       Icons.grain_outlined, Icons.local_shipping_outlined];
     return FutureBuilder<dynamic>(future: account, builder: (context, snapshot) {
-      if (!snapshot.hasData) return Scaffold(body: Center(child: snapshot.hasError
+      if (!snapshot.hasData) return Scaffold(body: snapshot.hasError
         ? Column(mainAxisSize: MainAxisSize.min, children: [Text('${snapshot.error}'),
           TextButton(onPressed: () => setState(() => account = widget.api.get('/api/mobile/me')),
             child: const Text('إعادة المحاولة')),
           TextButton(onPressed: widget.onLogout, child: const Text('تسجيل الدخول مجددًا'))])
-        : const CircularProgressIndicator()));
+        : const PageSkeleton());
       final user = json(snapshot.data['data']);
       final role = str(user['role']);
       final manager = role == 'OWNER' || role == 'MANAGER';
@@ -224,7 +246,16 @@ class _ErpHomeState extends State<ErpHome> {
       return Scaffold(
         key: scaffoldKey,
         appBar: AppBar(
-          title: Text(titles[selected], style: const TextStyle(fontWeight: FontWeight.w700)),
+          title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(selected == 0 ? str((user['store'] as Map?)?['name']) : titles[selected],
+              maxLines: 1, overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800)),
+            if (selected == 0) const Text('لوحة التحكم',
+              style: TextStyle(fontSize: 11, color: Color(0xffc8dce6))),
+          ]),
+          actions: [if (manager) IconButton(tooltip: 'التقارير',
+            onPressed: () => switchTo(8),
+            icon: const Icon(Icons.analytics_outlined))],
         ),
         drawer: Drawer(child: SafeArea(child: Column(children: [
           Padding(padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
@@ -258,14 +289,37 @@ class _ErpHomeState extends State<ErpHome> {
         ]))),
         body: KeyedSubtree(key: ValueKey(selected), child: body),
         bottomNavigationBar: NavigationBar(
-          height: 72,
+          height: 68,
           backgroundColor: Colors.white,
-          indicatorColor: const Color(0xffe2efe8),
-          selectedIndex: selected < 3 ? selected : 3,
-          onDestinationSelected: (index) => index == 3
-            ? scaffoldKey.currentState?.openDrawer() : switchTo(index),
+          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+          indicatorColor: const Color(0xffdceaf1),
+          selectedIndex: selected == 0 ? 0 : selected == 1 ? 1
+            : selected == 2 ? 3 : 4,
+          onDestinationSelected: (index) {
+            if (index == 2) {
+              if (manager) {
+                openPage(context, NewOrderPage(api: widget.api));
+              } else {
+                scaffoldKey.currentState?.openDrawer();
+              }
+              return;
+            }
+            if (index == 4) {
+              scaffoldKey.currentState?.openDrawer();
+              return;
+            }
+            switchTo(index == 3 ? 2 : index);
+          },
           destinations: [
-            for (final i in [0, 1, 2]) NavigationDestination(icon: Icon(icons[i]), label: titles[i]),
+            const NavigationDestination(icon: Icon(Icons.home_outlined),
+              selectedIcon: Icon(Icons.home_rounded), label: 'الرئيسية'),
+            const NavigationDestination(icon: Icon(Icons.receipt_long_outlined),
+              selectedIcon: Icon(Icons.receipt_long), label: 'الطلبات'),
+            NavigationDestination(icon: Icon(manager ? Icons.add_circle_rounded
+              : Icons.grid_view_rounded, size: 32, color: const Color(0xff123e57)),
+              label: manager ? 'طلب جديد' : 'الأقسام'),
+            const NavigationDestination(icon: Icon(Icons.warehouse_outlined),
+              selectedIcon: Icon(Icons.warehouse), label: 'المخزون'),
             const NavigationDestination(icon: Icon(Icons.menu), label: 'المزيد'),
           ]),
       );
@@ -296,30 +350,36 @@ class _DashboardState extends State<_Dashboard> {
 
   Widget metric(String label, dynamic value, IconData icon, String currency,
       {bool money = false}) => Card(child: Padding(
-    padding: const EdgeInsets.all(16),
+    padding: const EdgeInsets.all(14),
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Icon(icon, color: const Color(0xff9a793f), size: 22),
-      const SizedBox(height: 18),
-      Text(money ? '${str(value)} $currency' : str(value), maxLines: 1,
+      Row(children: [Icon(icon, color: const Color(0xff638098), size: 18),
+        const SizedBox(width: 6),
+        Expanded(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontSize: 12, color: Color(0xff657381))))]),
+      const SizedBox(height: 12),
+      Text(str(value), maxLines: 1,
         overflow: TextOverflow.ellipsis, textDirection: TextDirection.ltr,
-        style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800,
-          color: Color(0xff142720))),
-      const SizedBox(height: 5),
-      Text(label, style: const TextStyle(fontSize: 13, color: Color(0xff66766e))),
+        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800,
+          color: Color(0xff152b3c))),
+      if (money) Text(currency, style: const TextStyle(
+        fontSize: 11, color: Color(0xff788993))),
     ]),
   ));
 
   Widget shortcut(String title, IconData icon, VoidCallback onTap) =>
     InkWell(onTap: onTap, borderRadius: BorderRadius.circular(16),
-      child: Container(padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 13),
+      child: Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 17),
         decoration: BoxDecoration(color: Colors.white,
           border: Border.all(color: const Color(0xffe5eae6)),
           borderRadius: BorderRadius.circular(16)),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Icon(icon, size: 23, color: const Color(0xff173d34)),
-          const SizedBox(height: 8),
+          Container(width: 42, height: 42,
+            decoration: BoxDecoration(color: const Color(0xffedf3f7),
+              borderRadius: BorderRadius.circular(12)),
+            child: Icon(icon, size: 21, color: const Color(0xff123e57))),
+          const SizedBox(height: 10),
           Text(title, maxLines: 1, overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
         ])));
 
   @override
@@ -338,8 +398,6 @@ class _DashboardState extends State<_Dashboard> {
       final currency = str(data['currency']);
       final name = str(widget.user['name']).trim();
       final quick = <(String, IconData, VoidCallback)>[
-        if (widget.manager) ('طلب جديد', Icons.add_shopping_cart_outlined,
-          () => openPage(context, NewOrderPage(api: widget.api))),
         if (widget.manager) ('منتج جديد', Icons.add_box_outlined,
           () => openPage(context, SimpleProductPage(api: widget.api))),
         if (widget.manager) ('إضافة مخزون', Icons.add_home_work_outlined,
@@ -352,12 +410,13 @@ class _DashboardState extends State<_Dashboard> {
           () => widget.onSelect(5)),
       ];
       final metrics = <(String, dynamic, IconData, bool)>[
+        ('إجمالي المبيعات', sales['gross'], Icons.trending_up, true),
         ('صافي المبيعات', sales['net'], Icons.show_chart, true),
         ('الدفعات المستلمة', cash['received'], Icons.payments_outlined, true),
         ('الطلبات', sales['orders'], Icons.receipt_long_outlined, false),
         ('الوحدات المباعة', sales['units'], Icons.inventory_2_outlined, false),
-        ('المصروفات', expenses['total'], Icons.account_balance_wallet_outlined, true),
         ('المرتجعات', returns['count'], Icons.assignment_return_outlined, false),
+        ('المصروفات', expenses['total'], Icons.account_balance_wallet_outlined, true),
       ];
       return RefreshIndicator(onRefresh: () async {
         final next = load(); setState(() => report = next); await next;
@@ -367,13 +426,13 @@ class _DashboardState extends State<_Dashboard> {
         if (snapshot.hasError) Padding(padding: const EdgeInsets.only(bottom: 8),
           child: TextButton.icon(onPressed: () => setState(() => report = load()),
             icon: const Icon(Icons.refresh), label: const Text('تعذر تحديث الفترة · إعادة المحاولة'))),
-        Text('أهلًا، ${name.isEmpty ? 'بك' : name.split(' ').first} 👋',
-          style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w800,
-            color: Color(0xff142720))),
-        const SizedBox(height: 4),
-        Text(str((widget.user['store'] as Map?)?['name']),
-          style: const TextStyle(color: Color(0xff718079))),
-        const SizedBox(height: 20),
+        Text('صباح الخير، ${name.isEmpty ? 'أهلًا بك' : name.split(' ').first}',
+          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800,
+            color: Color(0xff152b3c))),
+        const SizedBox(height: 5),
+        const Text('ملخص شغلك في الفترة المحددة',
+          style: TextStyle(color: Color(0xff718079), fontSize: 12)),
+        const SizedBox(height: 15),
         Row(children: [
           for (final key in const ['today', 'yesterday', '7d'])
             Expanded(child: Padding(padding: const EdgeInsetsDirectional.only(end: 6),
@@ -396,25 +455,7 @@ class _DashboardState extends State<_Dashboard> {
         if (!const ['today', 'yesterday', '7d'].contains(period))
           Padding(padding: const EdgeInsets.only(top: 8), child: Text(labels[period]!,
             style: const TextStyle(color: Color(0xff173d34), fontWeight: FontWeight.w600))),
-        const SizedBox(height: 18),
-        Container(padding: const EdgeInsets.all(22),
-          decoration: BoxDecoration(color: const Color(0xff173d34),
-            borderRadius: BorderRadius.circular(24)),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Row(children: [Icon(Icons.trending_up, color: Color(0xffd8c59a)),
-              SizedBox(width: 8), Text('إجمالي المبيعات',
-                style: TextStyle(color: Color(0xffe0eae2), fontSize: 14))]),
-            const SizedBox(height: 15),
-            Text('${str(sales['gross'])} $currency', textDirection: TextDirection.ltr,
-              style: const TextStyle(color: Colors.white, fontSize: 30,
-                fontWeight: FontWeight.w800)),
-            const SizedBox(height: 8),
-            Text(labels[period]!, style: const TextStyle(color: Color(0xffc9d9ce))),
-          ])),
-        const SizedBox(height: 22),
-        const Text('ملخص النشاط', style: TextStyle(fontSize: 18,
-          fontWeight: FontWeight.w800, color: Color(0xff142720))),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         LayoutBuilder(builder: (context, constraints) {
           final width = (constraints.maxWidth - 10) / 2;
           return Wrap(spacing: 10, runSpacing: 10, children: [
@@ -422,17 +463,28 @@ class _DashboardState extends State<_Dashboard> {
               child: metric(m.$1, m.$2, m.$3, currency, money: m.$4)),
           ]);
         }),
-        const SizedBox(height: 24),
-        const Text('وصول سريع', style: TextStyle(fontSize: 18,
-          fontWeight: FontWeight.w800, color: Color(0xff142720))),
-        const SizedBox(height: 12),
+        const SizedBox(height: 22),
+        const Text('عمليات سريعة', style: TextStyle(fontSize: 17,
+          fontWeight: FontWeight.w800, color: Color(0xff152b3c))),
+        const SizedBox(height: 10),
+        if (widget.manager) Padding(padding: const EdgeInsets.only(bottom: 10),
+          child: FilledButton.icon(
+            onPressed: () => openPage(context, NewOrderPage(api: widget.api)),
+            icon: const Icon(Icons.add_shopping_cart_outlined),
+            label: const Padding(padding: EdgeInsets.symmetric(vertical: 9),
+              child: Text('تسجيل طلب جديد', style: TextStyle(
+                fontSize: 16, fontWeight: FontWeight.w700))))),
         LayoutBuilder(builder: (context, constraints) {
-          final width = (constraints.maxWidth - 16) / 3;
-          return Wrap(spacing: 8, runSpacing: 8, children: [
+          final width = (constraints.maxWidth - 10) / 2;
+          return Wrap(spacing: 10, runSpacing: 10, children: [
             for (final q in quick) SizedBox(width: width,
               child: shortcut(q.$1, q.$2, q.$3)),
           ]);
         }),
+        const SizedBox(height: 20),
+        if (widget.manager) TextButton.icon(onPressed: () => widget.onSelect(8),
+          icon: const Icon(Icons.analytics_outlined),
+          label: const Text('عرض التقارير التفصيلية')),
       ]));
     });
 }
