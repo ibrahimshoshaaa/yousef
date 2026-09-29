@@ -5,6 +5,7 @@ import { can } from "@/lib/rbac";
 import { ManualOrderActions } from "@/components/orders/ManualOrderActions";
 import { ShopifyOrderActions } from "@/components/orders/ShopifyOrderActions";
 import { SHOPIFY_FULFILLMENT_SCOPES } from "@/lib/config";
+import { hasShopifyScope } from "@/lib/shopify/scopes";
 import type { ManualOrderStatus } from "@/services/manual-order.service";
 
 const PAGE_SIZE = 20;
@@ -65,7 +66,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                 <p className="mb-2 text-xs font-semibold text-slate-500">بنود الطلب ({order.items.length})</p>
                 <div className="flex flex-wrap gap-2">{order.items.map(item => <span key={item.id} className="rounded-lg bg-slate-50 px-3 py-1.5 text-xs text-slate-700">{item.title} × {Number(item.quantity)} <span className="text-slate-400">· {item.consumptionStatus}</span></span>)}</div>
                 <Link href={`/dashboard/consumption?orderId=${order.id}`} className="mt-4 inline-block text-sm font-medium text-[#315b4c] hover:underline">عرض الاستهلاك ←</Link>
-                {order.shopifyId && can(session.role, "orders.write") && <ShopifyOrderActions orderId={order.id} stage={order.shopifyStage} fulfillmentStatus={order.fulfillmentStatus} missingScopes={(order.shopifyStage === "SHIPPING" ? ["write_fulfillments"] : SHOPIFY_FULFILLMENT_SCOPES.slice(0, 2)).filter(scope => !grantedScopes.has(scope))} />}
+                {order.shopifyId && can(session.role, "orders.write") && <ShopifyOrderActions orderId={order.id} stage={order.shopifyStage} fulfillmentStatus={order.fulfillmentStatus} missingScopes={(order.shopifyStage === "SHIPPING" ? ["write_fulfillments"] : SHOPIFY_FULFILLMENT_SCOPES.slice(0, 2)).filter(scope => !hasShopifyScope(grantedScopes, scope))} />}
                 {order.manualStatus && can(session.role, "orders.write") && <ManualOrderActions orderId={order.id} status={order.manualStatus as ManualOrderStatus} canReturn={["returns.write", "expenses.write", "inventory.write"].every(permission => can(session.role, permission))} />}
               </div>
             </details>
